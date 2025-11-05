@@ -87,6 +87,14 @@
     /* coverity[misra_c_2012_rule_8_9_violation] */
     _static FreeRTOS_Socket_t * xSocketToListen = NULL;
 
+    #if ( ipconfigHAS_DEBUG_PRINTF != 0 )
+
+/*
+ * For logging and debugging: make a string showing the TCP flags.
+ */
+        const char * prvTCPFlagMeaning( UBaseType_t xFlags );
+    #endif /* ipconfigHAS_DEBUG_PRINTF != 0 */
+
     static IPv46_Address_t xGetSourceAddrFromBuffer( const uint8_t * const pucEthernetBuffer );
 
 /*-----------------------------------------------------------*/
@@ -874,8 +882,7 @@
                                                           pxSocket->u.xTCP.xTCPWindow.xSize.ulRxWindowLength ) != pdFALSE ) )
                             {
                                 /* Send a challenge ACK. */
-                                ( void ) prvTCPSendChallengeAck( pxNetworkBuffer, pxSocket->u.xTCP.xTCPWindow.rx.ulCurrentSequenceNumber,
-                                                                 pxSocket->u.xTCP.xTCPWindow.ulOurSequenceNumber );
+                                ( void ) prvTCPSendChallengeAck( pxNetworkBuffer );
                             }
                             else
                             {
@@ -948,7 +955,6 @@
                         }
                     }
                     #endif /* ipconfigUSE_TCP_WIN */
-
                     /* In prvTCPHandleState() the incoming messages will be handled
                      * depending on the current state of the connection. */
                     if( prvTCPHandleState( pxSocket, &pxNetworkBuffer ) > 0 )

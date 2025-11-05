@@ -308,7 +308,7 @@
  * Type: TickType_t
  * Unit: milliseconds
  * Minimum: 0
- * Maximum: ( portMAX_DELAY / configTICK_RATE_HZ ) * 1000
+ * Maximum: portMAX_DELAY * portTICK_PERIOD_MS
  *
  * Sets the timeout to wait for a response to a router
  * solicitation message.
@@ -322,7 +322,7 @@
     #error ipconfigRA_SEARCH_TIME_OUT_MSEC must be at least 0
 #endif
 
-STATIC_ASSERT( pdMS_TO_TICKS( ipconfigRA_SEARCH_TIME_OUT_MSEC ) <= portMAX_DELAY );
+STATIC_ASSERT( ipconfigRA_SEARCH_TIME_OUT_MSEC <= ( portMAX_DELAY * portTICK_PERIOD_MS ) );
 
 /*---------------------------------------------------------------------------*/
 
@@ -357,7 +357,7 @@ STATIC_ASSERT( pdMS_TO_TICKS( ipconfigRA_SEARCH_TIME_OUT_MSEC ) <= portMAX_DELAY
  * Type: TickType_t
  * Unit: milliseconds
  * Minimum: 0
- * Maximum: ( portMAX_DELAY / configTICK_RATE_HZ ) * 1000
+ * Maximum: portMAX_DELAY * portTICK_PERIOD_MS
  *
  * Sets the timeout to wait for a response to a neighbour solicitation message.
  */
@@ -370,7 +370,7 @@ STATIC_ASSERT( pdMS_TO_TICKS( ipconfigRA_SEARCH_TIME_OUT_MSEC ) <= portMAX_DELAY
     #error ipconfigRA_IP_TEST_TIME_OUT_MSEC must be at least 0
 #endif
 
-STATIC_ASSERT( pdMS_TO_TICKS( ipconfigRA_IP_TEST_TIME_OUT_MSEC ) <= portMAX_DELAY );
+STATIC_ASSERT( ipconfigRA_IP_TEST_TIME_OUT_MSEC <= ( portMAX_DELAY * portTICK_PERIOD_MS ) );
 
 /*---------------------------------------------------------------------------*/
 
@@ -1726,7 +1726,8 @@ STATIC_ASSERT( ipconfigTCP_KEEP_ALIVE_INTERVAL <= ( portMAX_DELAY / configTICK_R
  * network buffers are themselves blocked waiting for a network buffer.
  *
  * ipconfigUDP_MAX_SEND_BLOCK_TIME_TICKS is specified in RTOS ticks. A time in
- * milliseconds can be converted to a time in ticks using pdMS_TO_TICKS().
+ * milliseconds can be converted to a time in ticks by dividing the time in
+ * milliseconds by portTICK_PERIOD_MS.
  */
 
 #ifndef ipconfigUDP_MAX_SEND_BLOCK_TIME_TICKS
@@ -2150,33 +2151,10 @@ STATIC_ASSERT( ipconfigSOCK_DEFAULT_SEND_BLOCK_TIME <= portMAX_DELAY );
     #define vPortFreeSocket( ptr )    vPortFree( ptr )
 #endif
 
+/*---------------------------------------------------------------------------*/
+
 /*===========================================================================*/
 /*                              SOCKET CONFIG                                */
-/*===========================================================================*/
-/*---------------------------------------------------------------------------*/
-/*===========================================================================*/
-/*---------------------------------------------------------------------------*/
-/*===========================================================================*/
-/*                          STREAM BUFFER CONFIG                             */
-/*===========================================================================*/
-
-/*---------------------------------------------------------------------------*/
-
-/*
- * pvPortMemCpyStreamBuffer
- *
- * Function to copy data into the stream buffer when sending
- * and copy data from the stream buffer when receiving.
- */
-
-#ifndef pvPortMemCpyStreamBuffer
-    #define pvPortMemCpyStreamBuffer( dst, src, count )    memcpy( dst, src, count )
-#endif
-
-/*---------------------------------------------------------------------------*/
-
-/*===========================================================================*/
-/*                          STREAM BUFFER CONFIG                             */
 /*===========================================================================*/
 /*---------------------------------------------------------------------------*/
 /*===========================================================================*/
@@ -3399,24 +3377,6 @@ STATIC_ASSERT( ipconfigDNS_SEND_BLOCK_TIME_TICKS <= portMAX_DELAY );
 
 #ifndef ipconfigPORT_SUPPRESS_WARNING
     #define ipconfigPORT_SUPPRESS_WARNING    ipconfigDISABLE
-#endif
-
-/*---------------------------------------------------------------------------*/
-
-/*
- * ipconfigSUPPRESS_BUFFER_PADDING_CHECK
- *
- * Type: BaseType_t ( ipconfigENABLE | ipconfigDISABLE )
- *
- * Suppress configuration check when user configuration
- * for ipconfigPACKET_FILLER_SIZE or ipconfigBUFFER_PADDING is
- * sub optimal.  Useful when porting to a MAC that does not include
- * the option to pad received packets ipconfigPACKET_FILLER_SIZE
- * within a word boundary.
- */
-
-#ifndef ipconfigSUPPRESS_BUFFER_PADDING_CHECK
-    #define ipconfigSUPPRESS_BUFFER_PADDING_CHECK    ipconfigDISABLE
 #endif
 
 /*---------------------------------------------------------------------------*/

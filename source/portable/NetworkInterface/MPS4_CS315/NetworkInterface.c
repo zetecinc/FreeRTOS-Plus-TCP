@@ -485,7 +485,7 @@ static BaseType_t xLAN91C111_NetworkInterfaceOutput( NetworkInterface_t * pxInte
 }
 /*-----------------------------------------------------------*/
 
-size_t uxNetworkInterfaceAllocateRAMToBuffers( NetworkBufferDescriptor_t pxNetworkBuffers[ ipconfigNUM_NETWORK_BUFFER_DESCRIPTORS ] )
+void vNetworkInterfaceAllocateRAMToBuffers( NetworkBufferDescriptor_t pxNetworkBuffers[ ipconfigNUM_NETWORK_BUFFER_DESCRIPTORS ] )
 {
     /* FIX ME if you want to use BufferAllocation_1.c, which uses statically
      * allocated network buffers. */
@@ -494,7 +494,6 @@ size_t uxNetworkInterfaceAllocateRAMToBuffers( NetworkBufferDescriptor_t pxNetwo
      * without implementing this function. */
     configASSERT( 0 );
     ( void ) pxNetworkBuffers;
-    return 0;
 }
 /*-----------------------------------------------------------*/
 

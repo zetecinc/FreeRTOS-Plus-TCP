@@ -149,21 +149,21 @@ struct xtopology_t xXTopologies[ XPAR_XEMACPS_NUM_INSTANCES ] =
 {
     [ 0 ] =
         {
-        .emac_baseaddr    = ZYNQ_ETHERNET_0_BASEADDR,
+        .emac_baseaddr    = XPAR_PS7_ETHERNET_0_BASEADDR,
         .emac_type        = xemac_type_emacps,
         .intc_baseaddr    = 0x0,
         .intc_emac_intr   = 0x0,
-        .scugic_baseaddr  = ZYNQ_SCUGIC_0_BASEADDR,
+        .scugic_baseaddr  = XPAR_PS7_SCUGIC_0_BASEADDR,
         .scugic_emac_intr = 0x36,
         },
     #if ( XPAR_XEMACPS_NUM_INSTANCES > 1 )
         [ 1 ] =
         {
-        .emac_baseaddr    = ZYNQ_ETHERNET_1_BASEADDR,
+        .emac_baseaddr    = XPAR_PS7_ETHERNET_1_BASEADDR,
         .emac_type        = xemac_type_emacps,
         .intc_baseaddr    = 0x0,
         .intc_emac_intr   = 0x0,
-        .scugic_baseaddr  = ZYNQ_SCUGIC_0_BASEADDR,
+        .scugic_baseaddr  = XPAR_PS7_SCUGIC_0_BASEADDR,
         .scugic_emac_intr = 0x4D,   /* See "7.2.3 Shared Peripheral Interrupts (SPI)" */
         },
     #endif
@@ -173,18 +173,14 @@ XEmacPs_Config mac_configs[ XPAR_XEMACPS_NUM_INSTANCES ] =
 {
     [ 0 ] =
         {
-        #ifndef SDT
-            .DeviceId = XPAR_PS7_ETHERNET_0_DEVICE_ID, /**< Unique ID  of device, used for 'xEMACIndex' */
-        #endif
-        .BaseAddress  = ZYNQ_ETHERNET_0_BASEADDR       /**< Physical base address of IPIF registers */
+        .DeviceId    = XPAR_PS7_ETHERNET_0_DEVICE_ID, /**< Unique ID  of device, used for 'xEMACIndex' */
+        .BaseAddress = XPAR_PS7_ETHERNET_0_BASEADDR   /**< Physical base address of IPIF registers */
         },
     #if ( XPAR_XEMACPS_NUM_INSTANCES > 1 )
         [ 1 ] =
         {
-        #ifndef SDT
-            .DeviceId = XPAR_PS7_ETHERNET_1_DEVICE_ID, /**< Unique ID  of device */
-        #endif
-        .BaseAddress  = ZYNQ_ETHERNET_1_BASEADDR       /**< Physical base address of IPIF registers */
+        .DeviceId    = XPAR_PS7_ETHERNET_1_DEVICE_ID, /**< Unique ID  of device */
+        .BaseAddress = XPAR_PS7_ETHERNET_1_BASEADDR   /**< Physical base address of IPIF registers */
         },
     #endif
 };
@@ -490,7 +486,7 @@ static BaseType_t prvGMACWaitLS( BaseType_t xEMACIndex,
 /*-----------------------------------------------------------*/
 
 #if ( nicUSE_UNCACHED_MEMORY == 0 )
-    size_t uxNetworkInterfaceAllocateRAMToBuffers( NetworkBufferDescriptor_t pxNetworkBuffers[ ipconfigNUM_NETWORK_BUFFER_DESCRIPTORS ] )
+    void vNetworkInterfaceAllocateRAMToBuffers( NetworkBufferDescriptor_t pxNetworkBuffers[ ipconfigNUM_NETWORK_BUFFER_DESCRIPTORS ] )
     {
         static uint8_t ucNetworkPackets[ ipconfigNUM_NETWORK_BUFFER_DESCRIPTORS * niBUFFER_1_PACKET_SIZE ] __attribute__( ( aligned( 32 ) ) );
         uint8_t * ucRAMBuffer = ucNetworkPackets;
@@ -502,11 +498,9 @@ static BaseType_t prvGMACWaitLS( BaseType_t xEMACIndex,
             *( ( unsigned * ) ucRAMBuffer ) = ( unsigned ) ( &( pxNetworkBuffers[ ul ] ) );
             ucRAMBuffer += niBUFFER_1_PACKET_SIZE;
         }
-
-        return( niBUFFER_1_PACKET_SIZE - ipBUFFER_PADDING );
     }
 #else /* if ( nicUSE_UNCACHED_MEMORY == 0 ) */
-    size_t uxNetworkInterfaceAllocateRAMToBuffers( NetworkBufferDescriptor_t pxNetworkBuffers[ ipconfigNUM_NETWORK_BUFFER_DESCRIPTORS ] )
+    void vNetworkInterfaceAllocateRAMToBuffers( NetworkBufferDescriptor_t pxNetworkBuffers[ ipconfigNUM_NETWORK_BUFFER_DESCRIPTORS ] )
     {
         static uint8_t * pucNetworkPackets = NULL;
 
@@ -527,8 +521,6 @@ static BaseType_t prvGMACWaitLS( BaseType_t xEMACIndex,
                 }
             }
         }
-
-        return( niBUFFER_1_PACKET_SIZE - ipBUFFER_PADDING );
     }
 #endif /* ( nicUSE_UNCACHED_MEMORY == 0 ) */
 /*-----------------------------------------------------------*/

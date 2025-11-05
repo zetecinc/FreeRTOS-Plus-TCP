@@ -18,7 +18,7 @@ this function:
 * pvPortMalloc
 * pvPortFree
 * xNetworkInterfaceOutput
-* uxNetworkInterfaceAllocateRAMToBuffers
+* vNetworkInterfaceAllocateRAMToBuffers
 
 This proof disables the tracing library in the header.
 
@@ -29,7 +29,7 @@ This proof checks FreeRTOS_OutputARPRequest in multiple configuration:
   FreeRTOS_OutputARPRequest and
   FreeRTOS-Plus-TCP/source/portable/BufferManagement/BufferAllocation_2.c
   are memory save.  This proof depends entirely of the implementation
-  correctness of uxNetworkInterfaceAllocateRAMToBuffers.
+  correctness of vNetworkInterfaceAllocateRAMToBuffers.
 * The proof in directory minimal_configuration_minimal_packet_size
   guarantees that using
   FreeRTOS-Plus-TCP/source/portable/BufferManagement/BufferAllocation_2.c

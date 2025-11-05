@@ -436,14 +436,6 @@ void vDHCPv6Process( BaseType_t xReset,
                 {
                     FreeRTOS_printf( ( "vDHCPProcess: FreeRTOS_recvfrom returns %d\n", ( int ) lBytes ) );
                 }
-                else if( lBytes == 0 )
-                {
-                    vReleaseSinglePacketFromUDPSocket( EP_DHCPData.xDHCPSocket );
-                }
-                else
-                {
-                    /* do nothing, coverity happy */
-                }
 
                 break;
             }
@@ -458,8 +450,6 @@ void vDHCPv6Process( BaseType_t xReset,
             {
                 xDoProcess = xDHCPv6Process_PassReplyToEndPoint( pxEndPoint );
             }
-
-            FreeRTOS_ReleaseUDPPayloadBuffer( pucUDPPayload );
         }
     }
 

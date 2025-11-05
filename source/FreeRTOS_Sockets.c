@@ -34,7 +34,7 @@
 
 /* Standard includes. */
 #include <stdint.h>
-#include <stdio.h>
+#include <nanoprintf.h>
 
 /* FreeRTOS includes. */
 #include "FreeRTOS.h"
@@ -2196,21 +2196,21 @@ void * vSocketClose( FreeRTOS_Socket_t * pxSocket )
 
                     #if ( ipconfigUSE_IPv4 != 0 )
                         case pdFALSE_UNSIGNED:
-                            ( void ) snprintf( pucSocketProps, sizeof( pucSocketProps ), "%xip port %u to %xip port %u",
-                                               ( unsigned ) pxSocket->xLocalAddress.ulIP_IPv4,
-                                               pxSocket->usLocalPort,
-                                               ( unsigned ) pxSocket->u.xTCP.xRemoteIP.ulIP_IPv4,
-                                               pxSocket->u.xTCP.usRemotePort );
+                            ( void ) npf_snprintf( pucSocketProps, sizeof( pucSocketProps ), "%xip port %u to %xip port %u",
+                                                   ( unsigned ) pxSocket->xLocalAddress.ulIP_IPv4,
+                                                   pxSocket->usLocalPort,
+                                                   ( unsigned ) pxSocket->u.xTCP.xRemoteIP.ulIP_IPv4,
+                                                   pxSocket->u.xTCP.usRemotePort );
                             break;
                     #endif /* ( ipconfigUSE_IPv4 != 0 ) */
 
                     #if ( ipconfigUSE_IPv6 != 0 )
                         case pdTRUE_UNSIGNED:
-                            ( void ) snprintf( pucSocketProps, sizeof( pucSocketProps ), "%pip port %u to %pip port %u",
-                                               ( void * ) pxSocket->xLocalAddress.xIP_IPv6.ucBytes,
-                                               pxSocket->usLocalPort,
-                                               ( void * ) pxSocket->u.xTCP.xRemoteIP.xIP_IPv6.ucBytes,
-                                               pxSocket->u.xTCP.usRemotePort );
+                            ( void ) npf_snprintf( pucSocketProps, sizeof( pucSocketProps ), "%pip port %u to %pip port %u",
+                                                   ( void * ) pxSocket->xLocalAddress.xIP_IPv6.ucBytes,
+                                                   pxSocket->usLocalPort,
+                                                   ( void * ) pxSocket->u.xTCP.xRemoteIP.xIP_IPv6.ucBytes,
+                                                   pxSocket->u.xTCP.usRemotePort );
                             break;
                     #endif /* ( ipconfigUSE_IPv6 != 0 ) */
 
@@ -2228,19 +2228,19 @@ void * vSocketClose( FreeRTOS_Socket_t * pxSocket )
             {
                 #if ( ipconfigUSE_IPv4 != 0 )
                     case pdFALSE_UNSIGNED:
-                        ( void ) snprintf( pucSocketProps, sizeof( pucSocketProps ),
-                                           "%xip port %u",
-                                           ( unsigned ) pxSocket->xLocalAddress.ulIP_IPv4,
-                                           pxSocket->usLocalPort );
+                        ( void ) npf_snprintf( pucSocketProps, sizeof( pucSocketProps ),
+                                               "%xip port %u",
+                                               ( unsigned ) pxSocket->xLocalAddress.ulIP_IPv4,
+                                               pxSocket->usLocalPort );
                         break;
                 #endif /* ( ipconfigUSE_IPv4 != 0 ) */
 
                 #if ( ipconfigUSE_IPv6 != 0 )
                     case pdTRUE_UNSIGNED:
-                        ( void ) snprintf( pucSocketProps, sizeof( pucSocketProps ),
-                                           "%pip port %u",
-                                           ( void * ) pxSocket->xLocalAddress.xIP_IPv6.ucBytes,
-                                           pxSocket->usLocalPort );
+                        ( void ) npf_snprintf( pucSocketProps, sizeof( pucSocketProps ),
+                                               "%pip port %u",
+                                               ( void * ) pxSocket->xLocalAddress.xIP_IPv6.ucBytes,
+                                               pxSocket->usLocalPort );
                         break;
                 #endif /* ( ipconfigUSE_IPv6 != 0 ) */
 
@@ -2285,7 +2285,7 @@ void * vSocketClose( FreeRTOS_Socket_t * pxSocket )
 
         if( pxSocketToDelete->u.xTCP.eTCPState == eTCP_LISTEN )
         {
-            pxIterator = listGET_HEAD_ENTRY( &xBoundTCPSocketsList );
+            pxIterator = listGET_NEXT( pxEnd );
 
             while( pxIterator != pxEnd )
             {
@@ -2309,7 +2309,7 @@ void * vSocketClose( FreeRTOS_Socket_t * pxSocket )
         }
         else
         {
-            for( pxIterator = listGET_HEAD_ENTRY( &xBoundTCPSocketsList );
+            for( pxIterator = listGET_NEXT( pxEnd );
                  pxIterator != pxEnd;
                  pxIterator = listGET_NEXT( pxIterator ) )
             {
@@ -3054,7 +3054,7 @@ static const ListItem_t * pxListFindListItemWithValue( const List_t * pxList,
         /* coverity[misra_c_2012_rule_11_3_violation] */
         const ListItem_t * pxEnd = ( ( const ListItem_t * ) &( pxList->xListEnd ) );
 
-        for( pxIterator = listGET_HEAD_ENTRY( pxList );
+        for( pxIterator = listGET_NEXT( pxEnd );
              pxIterator != pxEnd;
              pxIterator = listGET_NEXT( pxIterator ) )
         {
@@ -3926,13 +3926,14 @@ void vSocketWakeUpUser( FreeRTOS_Socket_t * pxSocket )
         }
         ( void ) xTaskResumeAll();
 
-        if( ( pxClientSocket != NULL ) && ( pxParentSocket->u.xTCP.bits.bReuseSocket == pdFALSE_UNSIGNED ) )
-        {
-            FreeRTOS_printf( ( "prvAcceptWaitClient: client %p parent %p\n",
-                               ( void * ) pxClientSocket, ( void * ) pxParentSocket ) );
-        }
 
         if( pxClientSocket != NULL )
+        {
+            FreeRTOS_printf( ( "prvAcceptWaitClient: client %p parent %p\n",
+                                ( void * ) pxClientSocket, ( void * ) pxParentSocket ) );
+        }
+
+        if( ( pxClientSocket != NULL ) && ( pxParentSocket->u.xTCP.bits.bReuseSocket == pdFALSE_UNSIGNED ) )
         {
             if( pxAddressLength != NULL )
             {
@@ -4961,7 +4962,7 @@ void vSocketWakeUpUser( FreeRTOS_Socket_t * pxSocket )
 
         ( void ) ulLocalIP;
 
-        for( pxIterator = listGET_HEAD_ENTRY( &xBoundTCPSocketsList );
+        for( pxIterator = listGET_NEXT( pxEnd );
              pxIterator != pxEnd;
              pxIterator = listGET_NEXT( pxIterator ) )
         {
@@ -5855,9 +5856,9 @@ BaseType_t FreeRTOS_GetIPType( ConstSocket_t xSocket )
         if( pxSocket->u.xTCP.eTCPState == ( uint8_t ) eTCP_LISTEN )
         {
             /* Using function "snprintf". */
-            const int32_t copied_len = snprintf( ucChildText, sizeof( ucChildText ), " %d/%d",
-                                                 pxSocket->u.xTCP.usChildCount,
-                                                 pxSocket->u.xTCP.usBacklog );
+            const int32_t copied_len = npf_snprintf( ucChildText, sizeof( ucChildText ), " %d/%d",
+                                                     pxSocket->u.xTCP.usChildCount,
+                                                     pxSocket->u.xTCP.usBacklog );
             ( void ) copied_len;
             /* These should never evaluate to false since the buffers are both shorter than 5-6 characters (<=65535) */
             configASSERT( copied_len >= 0 );                                /* LCOV_EXCL_BR_LINE the 'taken' branch will never execute. See the above comment. */
@@ -5873,15 +5874,15 @@ BaseType_t FreeRTOS_GetIPType( ConstSocket_t xSocket )
         {
             #if ( ipconfigUSE_IPv4 != 0 )
                 case pdFALSE_UNSIGNED:
-                    ( void ) snprintf( pcRemoteIp, sizeof( pcRemoteIp ), "%xip", ( unsigned ) pxSocket->u.xTCP.xRemoteIP.ulIP_IPv4 );
+                    ( void ) npf_snprintf( pcRemoteIp, sizeof( pcRemoteIp ), "%xip", ( unsigned ) pxSocket->u.xTCP.xRemoteIP.ulIP_IPv4 );
                     break;
             #endif /* ( ipconfigUSE_IPv4 != 0 ) */
 
             #if ( ipconfigUSE_IPv6 != 0 )
                 case pdTRUE_UNSIGNED:
-                    ( void ) snprintf( pcRemoteIp,
-                                       sizeof( pcRemoteIp ),
-                                       "%pip", ( void * ) pxSocket->u.xTCP.xRemoteIP.xIP_IPv6.ucBytes );
+                    ( void ) npf_snprintf( pcRemoteIp,
+                                           sizeof( pcRemoteIp ),
+                                           "%pip", ( void * ) pxSocket->u.xTCP.xRemoteIP.xIP_IPv6.ucBytes );
                     break;
             #endif /* ( ipconfigUSE_IPv6 != 0 ) */
 
@@ -6085,7 +6086,6 @@ BaseType_t FreeRTOS_GetIPType( ConstSocket_t xSocket )
         {
             const ListItem_t * pxIterator;
             const ListItem_t * pxEnd;
-            const List_t * pxList;
 
             if( xRound == 0 )
             {
@@ -6093,7 +6093,6 @@ BaseType_t FreeRTOS_GetIPType( ConstSocket_t xSocket )
                 /* More details at: https://github.com/FreeRTOS/FreeRTOS-Plus-TCP/blob/main/MISRA.md#rule-113 */
                 /* coverity[misra_c_2012_rule_11_3_violation] */
                 pxEnd = ( ( const ListItem_t * ) &( xBoundUDPSocketsList.xListEnd ) );
-                pxList = &xBoundUDPSocketsList;
             }
 
             #if ipconfigUSE_TCP == 1
@@ -6103,11 +6102,10 @@ BaseType_t FreeRTOS_GetIPType( ConstSocket_t xSocket )
                     /* More details at: https://github.com/FreeRTOS/FreeRTOS-Plus-TCP/blob/main/MISRA.md#rule-113 */
                     /* coverity[misra_c_2012_rule_11_3_violation] */
                     pxEnd = ( ( const ListItem_t * ) &( xBoundTCPSocketsList.xListEnd ) );
-                    pxList = &xBoundTCPSocketsList;
                 }
             #endif /* ipconfigUSE_TCP == 1 */
 
-            for( pxIterator = listGET_HEAD_ENTRY( pxList );
+            for( pxIterator = listGET_NEXT( pxEnd );
                  pxIterator != pxEnd;
                  pxIterator = listGET_NEXT( pxIterator ) )
             {

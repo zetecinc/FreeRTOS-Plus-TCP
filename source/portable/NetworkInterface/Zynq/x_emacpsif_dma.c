@@ -89,7 +89,7 @@
 #endif
 #define TX_OFFSET               ipconfigPACKET_FILLER_SIZE
 
-#define dmaRX_TX_BUFFER_SIZE    ( 1536 - ipBUFFER_PADDING )
+#define dmaRX_TX_BUFFER_SIZE    1536
 
 /* Defined in NetworkInterface.c */
 extern TaskHandle_t xEMACTaskHandles[ XPAR_XEMACPS_NUM_INSTANCES ];
@@ -129,7 +129,7 @@ static void prvPassEthMessages( NetworkBufferDescriptor_t * pxDescriptor );
 int is_tx_space_available( xemacpsif_s * xemacpsif )
 {
     size_t uxCount;
-    BaseType_t xEMACIndex = get_xEMACIndex( &xemacpsif->emacps );
+    BaseType_t xEMACIndex = xemacpsif->emacps.Config.DeviceId;
 
     if( xTXDescriptorSemaphores[ xEMACIndex ] != NULL )
     {
@@ -147,7 +147,7 @@ void emacps_check_tx( xemacpsif_s * xemacpsif )
 {
     int tail = xemacpsif->txTail;
     int head = xemacpsif->txHead;
-    BaseType_t xEMACIndex = get_xEMACIndex( &xemacpsif->emacps );
+    BaseType_t xEMACIndex = xemacpsif->emacps.Config.DeviceId;
     size_t uxCount = ( ( UBaseType_t ) ipconfigNIC_N_TX_DESC ) - uxSemaphoreGetCount( xTXDescriptorSemaphores[ xEMACIndex ] );
 
     /* uxCount is the number of TX descriptors that are in use by the DMA. */
@@ -210,7 +210,7 @@ void emacps_send_handler( void * arg )
     BaseType_t xEMACIndex;
 
     xemacpsif = ( xemacpsif_s * ) arg;
-    xEMACIndex = get_xEMACIndex( &xemacpsif->emacps );
+    xEMACIndex = xemacpsif->emacps.Config.DeviceId;
 
     /* This function is called from an ISR. The Xilinx ISR-handler has already
      * cleared the TXCOMPL and TXSR_USEDREAD status bits in the XEMACPS_TXSR register.
@@ -254,7 +254,7 @@ XStatus emacps_send_message( xemacpsif_s * xemacpsif,
     int txHead = xemacpsif->txHead;
     int iHasSent = 0;
     uint32_t ulBaseAddress = xemacpsif->emacps.Config.BaseAddress;
-    BaseType_t xEMACIndex = get_xEMACIndex( &xemacpsif->emacps );
+    BaseType_t xEMACIndex = xemacpsif->emacps.Config.DeviceId;
     TickType_t xBlockTimeTicks = pdMS_TO_TICKS( 5000U );
 
     /* This driver wants to own all network buffers which are to be transmitted. */
@@ -362,7 +362,7 @@ void emacps_recv_handler( void * arg )
 
     xemacpsif = ( xemacpsif_s * ) arg;
     xemacpsif->isr_events |= EMAC_IF_RX_EVENT;
-    xEMACIndex = get_xEMACIndex( &xemacpsif->emacps );
+    xEMACIndex = xemacpsif->emacps.Config.DeviceId;
 
     /* The driver has already cleared the FRAMERX, BUFFNA and error bits
      * in the XEMACPS_RXSR register,
@@ -439,7 +439,7 @@ BaseType_t xMayAcceptPacket( uint8_t * pucEthernetBuffer )
 
         /* Ensure that the incoming packet is not fragmented (only outgoing packets
          * can be fragmented) as these are the only handled IP frames currently. */
-        if( ( pxIPHeader->usFragmentOffset & ipFRAGMENT_OFFSET_BIT_MASK ) != 0U )
+        if( ( pxIPHeader->usFragmentOffset & FreeRTOS_ntohs( ipFRAGMENT_OFFSET_BIT_MASK ) ) != 0U )
         {
             return pdFALSE;
         }
@@ -491,7 +491,7 @@ int emacps_check_rx( xemacpsif_s * xemacpsif,
     int rx_bytes;
     volatile int msgCount = 0;
     int rxHead = xemacpsif->rxHead;
-    BaseType_t xEMACIndex = get_xEMACIndex( &xemacpsif->emacps );
+    BaseType_t xEMACIndex = xemacpsif->emacps.Config.DeviceId;
     BaseType_t xAccepted;
 
     #if ( ipconfigUSE_LINKED_RX_MESSAGES != 0 )
@@ -632,7 +632,7 @@ void clean_dma_txdescs( xemacpsif_s * xemacpsif )
 {
     int index;
     unsigned char * ucTxBuffer;
-    BaseType_t xEMACIndex = get_xEMACIndex( &xemacpsif->emacps );
+    BaseType_t xEMACIndex = xemacpsif->emacps.Config.DeviceId;
 
     /* Clear all TX descriptors and assign uncached memory to each descriptor.
      * "tx_space" points to the first available TX buffer. */
@@ -653,7 +653,7 @@ void clean_dma_txdescs( xemacpsif_s * xemacpsif )
 XStatus init_dma( xemacpsif_s * xemacpsif )
 {
     NetworkBufferDescriptor_t * pxBuffer;
-    BaseType_t xEMACIndex = get_xEMACIndex( &xemacpsif->emacps );
+    BaseType_t xEMACIndex = xemacpsif->emacps.Config.DeviceId;
 
     int iIndex;
     UBaseType_t xRxSize;

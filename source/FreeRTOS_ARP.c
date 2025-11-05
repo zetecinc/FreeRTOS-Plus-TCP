@@ -893,11 +893,10 @@
 
         *( ppxEndPoint ) = NULL;
         ulAddressToLookup = *pulIPAddress;
+        pxEndPoint = FreeRTOS_FindEndPointOnIP_IPv4( ulAddressToLookup );
 
         if( xIsIPv4Loopback( ulAddressToLookup ) != 0 )
         {
-            pxEndPoint = FreeRTOS_FindEndPointOnIP_IPv4( ulAddressToLookup );
-
             if( pxEndPoint != NULL )
             {
                 /* For multi-cast, use the first IPv4 end-point. */
@@ -926,15 +925,16 @@
                 }
             }
         }
-        else if( xIsIPv4Broadcast( ulAddressToLookup, ppxEndPoint ) == pdTRUE )
+        else if( ( FreeRTOS_htonl( ulAddressToLookup ) & 0xffU ) == 0xffU ) /* Is this a broadcast address like x.x.x.255 ? */
         {
             /* This is a broadcast so it uses the broadcast MAC address. */
             ( void ) memcpy( pxMACAddress->ucBytes, xBroadcastMACAddress.ucBytes, sizeof( MACAddress_t ) );
+            pxEndPoint = FreeRTOS_FindEndPointOnNetMask( ulAddressToLookup );
 
-            /* Note that xIsIPv4Broadcast() already filled in ppxEndPoint with the corresponding endpoint
-             * or the first IPv4 endpoint in case ulAddressToLookup was FREERTOS_INADDR_BROADCAST.
-             * It is also safe to call xIsIPv4Broadcast() with a null pointer so no need to use
-             * the intermediary pxEndPoint */
+            if( pxEndPoint != NULL )
+            {
+                *( ppxEndPoint ) = pxEndPoint;
+            }
 
             eReturn = eResolutionCacheHit;
         }

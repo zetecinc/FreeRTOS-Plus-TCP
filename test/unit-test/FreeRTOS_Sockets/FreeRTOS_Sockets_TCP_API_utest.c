@@ -950,6 +950,7 @@ void test_FreeRTOS_send_InvalidInput( void )
     FreeRTOS_Socket_t xSocket;
     uint8_t pvBuffer[ ipconfigTCP_MSS ];
     size_t uxDataLength;
+    BaseType_t xFlags;
     StreamBuffer_t xLocalStreamBuffer;
 
     memset( &xSocket, 0, sizeof( xSocket ) );
@@ -960,7 +961,7 @@ void test_FreeRTOS_send_InvalidInput( void )
     xSocket.u.xTCP.bits.bFinSent = pdFALSE_UNSIGNED;
     uxDataLength = 0;
     listLIST_ITEM_CONTAINER_ExpectAnyArgsAndReturn( &xBoundTCPSocketsList );
-    xReturn = FreeRTOS_send( &xSocket, pvBuffer, uxDataLength, 0 );
+    xReturn = FreeRTOS_send( &xSocket, pvBuffer, uxDataLength, xFlags );
     TEST_ASSERT_EQUAL( 0, xReturn );
 
     xSocket.ucProtocol = FREERTOS_IPPROTO_TCP;
@@ -971,7 +972,7 @@ void test_FreeRTOS_send_InvalidInput( void )
     listLIST_ITEM_CONTAINER_ExpectAnyArgsAndReturn( &xBoundTCPSocketsList );
     uxStreamBufferGetSpace_ExpectAndReturn( xSocket.u.xTCP.txStream, 0 );
     xIsCallingFromIPTask_ExpectAndReturn( pdTRUE );
-    xReturn = FreeRTOS_send( &xSocket, pvBuffer, uxDataLength, 0 );
+    xReturn = FreeRTOS_send( &xSocket, pvBuffer, uxDataLength, xFlags );
     TEST_ASSERT_EQUAL( -pdFREERTOS_ERRNO_ENOSPC, xReturn );
 
     /* Socket is not connected any more. */
@@ -983,7 +984,7 @@ void test_FreeRTOS_send_InvalidInput( void )
     listLIST_ITEM_CONTAINER_ExpectAnyArgsAndReturn( &xBoundTCPSocketsList );
     uxStreamBufferGetSpace_ExpectAndReturn( xSocket.u.xTCP.txStream, 0 );
     xIsCallingFromIPTask_ExpectAndReturn( pdTRUE );
-    xReturn = FreeRTOS_send( &xSocket, pvBuffer, uxDataLength, 0 );
+    xReturn = FreeRTOS_send( &xSocket, pvBuffer, uxDataLength, xFlags );
     TEST_ASSERT_EQUAL( -pdFREERTOS_ERRNO_ENOTCONN, xReturn );
 }
 
@@ -996,6 +997,7 @@ void test_FreeRTOS_send_ExactSpaceInStreamBuffer( void )
     FreeRTOS_Socket_t xSocket;
     uint8_t pvBuffer[ ipconfigTCP_MSS ];
     size_t uxDataLength;
+    BaseType_t xFlags;
     StreamBuffer_t xLocalStreamBuffer;
 
     /* 1. Last set of bytes. */
@@ -1017,7 +1019,7 @@ void test_FreeRTOS_send_ExactSpaceInStreamBuffer( void )
     xIsCallingFromIPTask_ExpectAndReturn( pdFALSE );
     xSendEventToIPTask_ExpectAndReturn( eTCPTimerEvent, pdPASS );
 
-    xReturn = FreeRTOS_send( &xSocket, pvBuffer, uxDataLength, 0 );
+    xReturn = FreeRTOS_send( &xSocket, pvBuffer, uxDataLength, xFlags );
 
     TEST_ASSERT_EQUAL( uxDataLength, xReturn );
     TEST_ASSERT_EQUAL( pdTRUE, xSocket.u.xTCP.bits.bCloseRequested );
@@ -1033,7 +1035,7 @@ void test_FreeRTOS_send_ExactSpaceInStreamBuffer( void )
     uxStreamBufferAdd_ExpectAndReturn( xSocket.u.xTCP.txStream, 0U, pvBuffer, uxDataLength, uxDataLength );
     xIsCallingFromIPTask_ExpectAndReturn( pdFALSE );
     xSendEventToIPTask_ExpectAndReturn( eTCPTimerEvent, pdPASS );
-    xReturn = FreeRTOS_send( &xSocket, pvBuffer, uxDataLength, 0 );
+    xReturn = FreeRTOS_send( &xSocket, pvBuffer, uxDataLength, xFlags );
 
     TEST_ASSERT_EQUAL( uxDataLength, xReturn );
     TEST_ASSERT_EQUAL( pdFALSE, xSocket.u.xTCP.bits.bCloseRequested );
@@ -1048,6 +1050,7 @@ void test_FreeRTOS_send_MoreSpaceInStreamBuffer( void )
     FreeRTOS_Socket_t xSocket;
     uint8_t pvBuffer[ ipconfigTCP_MSS ];
     size_t uxDataLength;
+    BaseType_t xFlags;
     StreamBuffer_t xLocalStreamBuffer;
 
     memset( &xSocket, 0, sizeof( xSocket ) );
@@ -1067,7 +1070,7 @@ void test_FreeRTOS_send_MoreSpaceInStreamBuffer( void )
     xTaskResumeAll_ExpectAndReturn( pdFALSE );
     xIsCallingFromIPTask_ExpectAndReturn( pdFALSE );
     xSendEventToIPTask_ExpectAndReturn( eTCPTimerEvent, pdPASS );
-    xReturn = FreeRTOS_send( &xSocket, pvBuffer, uxDataLength, 0 );
+    xReturn = FreeRTOS_send( &xSocket, pvBuffer, uxDataLength, xFlags );
 
     TEST_ASSERT_EQUAL( uxDataLength, xReturn );
     TEST_ASSERT_EQUAL( pdTRUE, xSocket.u.xTCP.bits.bCloseRequested );
@@ -1360,6 +1363,7 @@ void test_FreeRTOS_send_ExactSpaceInStreamBufferInIPTask( void )
     FreeRTOS_Socket_t xSocket;
     uint8_t pvBuffer[ ipconfigTCP_MSS ];
     size_t uxDataLength;
+    BaseType_t xFlags;
     StreamBuffer_t xLocalStreamBuffer;
 
     /* 1. Last set of bytes. */
@@ -1380,7 +1384,7 @@ void test_FreeRTOS_send_ExactSpaceInStreamBufferInIPTask( void )
     xTaskResumeAll_ExpectAndReturn( pdFALSE );
     xIsCallingFromIPTask_ExpectAndReturn( pdTRUE );
 
-    xReturn = FreeRTOS_send( &xSocket, pvBuffer, uxDataLength, 0 );
+    xReturn = FreeRTOS_send( &xSocket, pvBuffer, uxDataLength, xFlags );
 
     TEST_ASSERT_EQUAL( uxDataLength, xReturn );
 }
@@ -1392,7 +1396,7 @@ void test_FreeRTOS_listen_InvalidValues( void )
 {
     BaseType_t xReturn;
     FreeRTOS_Socket_t xSocket;
-    BaseType_t xBacklog = 0;
+    BaseType_t xBacklog;
 
     memset( &xSocket, 0, sizeof( xSocket ) );
 
@@ -1526,7 +1530,7 @@ void test_FreeRTOS_shutdown_Invalid( void )
 {
     BaseType_t xReturn;
     FreeRTOS_Socket_t xSocket;
-    BaseType_t xHow = 0;
+    BaseType_t xHow;
     int i;
 
     memset( &xSocket, 0, sizeof( xSocket ) );
@@ -1566,7 +1570,7 @@ void test_FreeRTOS_shutdown_Success( void )
 {
     BaseType_t xReturn;
     FreeRTOS_Socket_t xSocket;
-    BaseType_t xHow = pdFALSE;
+    BaseType_t xHow;
 
     memset( &xSocket, 0, sizeof( xSocket ) );
 
@@ -1657,8 +1661,10 @@ void test_FreeRTOS_tx_space_NULLStream( void )
 void test_FreeRTOS_tx_space_ValidStream( void )
 {
     BaseType_t xReturn;
-    FreeRTOS_Socket_t xSocket = { 0 };
-    const uint8_t ucStream[ 20 ] = { 0 };
+    FreeRTOS_Socket_t xSocket;
+    uint8_t ucStream[ 20 ];
+
+    memset( &xSocket, 0, sizeof( xSocket ) );
 
     xSocket.ucProtocol = FREERTOS_IPPROTO_TCP;
     xSocket.u.xTCP.txStream = ( StreamBuffer_t * ) ucStream;
@@ -1888,7 +1894,7 @@ void test_FreeRTOS_get_tx_base_InvalidParams( void )
     pucReturn = FreeRTOS_get_tx_base( &xSocket );
     TEST_ASSERT_EQUAL( NULL, pucReturn );
 
-    xSocket.u.xTCP.bits.bMallocError = pdTRUE_UNSIGNED;
+    xSocket.u.xTCP.bits.bMallocError == pdTRUE_UNSIGNED;
     pucReturn = FreeRTOS_get_tx_base( &xSocket );
     TEST_ASSERT_EQUAL( NULL, pucReturn );
 }

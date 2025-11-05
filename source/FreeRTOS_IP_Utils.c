@@ -1004,29 +1004,26 @@ void vPreCheckConfigs( void )
     {
         size_t uxSize;
 
-        #if ( ipconfigSUPPRESS_BUFFER_PADDING_CHECK == 0 )
-
-            /* Check if ipBUFFER_PADDING has a minimum size, depending on the platform.
-             * See FreeRTOS_IP.h for more details. */
-            #if ( UINTPTR_MAX > 0xFFFFFFFFU )
-
-                /*
-                 * This is a 64-bit platform, make sure there is enough space in
-                 * pucEthernetBuffer to store a pointer.
-                 */
-                configASSERT( ipBUFFER_PADDING >= 14U );
-            #else
-                /* This is a 32-bit platform. */
-                configASSERT( ipBUFFER_PADDING >= 10U );
-            #endif /* UINTPTR_MAX > 0xFFFFFFFFU */
+        /* Check if ipBUFFER_PADDING has a minimum size, depending on the platform.
+         * See FreeRTOS_IP.h for more details. */
+        #if ( UINTPTR_MAX > 0xFFFFFFFFU )
 
             /*
-             * The size of the Ethernet header (14) plus ipBUFFER_PADDING should be a
-             * multiple of 32 bits, in order to get aligned access to all uint32_t
-             * fields in the protocol headers.
+             * This is a 64-bit platform, make sure there is enough space in
+             * pucEthernetBuffer to store a pointer.
              */
-            configASSERT( ( ( ( ipSIZE_OF_ETH_HEADER ) + ( ipBUFFER_PADDING ) ) % 4U ) == 0U );
-        #endif /* if ( ipconfigSUPPRESS_BUFFER_PADDING_CHECK == 0 ) */
+            configASSERT( ipBUFFER_PADDING >= 14U );
+        #else
+            /* This is a 32-bit platform. */
+            configASSERT( ipBUFFER_PADDING >= 10U );
+        #endif /* UINTPTR_MAX > 0xFFFFFFFFU */
+
+        /*
+         * The size of the Ethernet header (14) plus ipBUFFER_PADDING should be a
+         * multiple of 32 bits, in order to get aligned access to all uint32_t
+         * fields in the protocol headers.
+         */
+        configASSERT( ( ( ( ipSIZE_OF_ETH_HEADER ) + ( ipBUFFER_PADDING ) ) % 4U ) == 0U );
 
         /* LCOV_EXCL_BR_START */
         uxSize = ipconfigNETWORK_MTU;
@@ -1825,30 +1822,6 @@ uint32_t FreeRTOS_round_down( uint32_t a,
     }
 
     return ulResult;
-}
-/*-----------------------------------------------------------*/
-
-/**
- * @brief Release single UDP packet from a given socket
- * @param[in] xSocket UDP Socket from which the packet should be released.
- */
-void vReleaseSinglePacketFromUDPSocket( const ConstSocket_t xSocket )
-{
-    uint8_t * pucUDPPayload = NULL;
-    int32_t lBytes;
-
-    /* Passing the address of a pointer (pucUDPPayload) because FREERTOS_ZERO_COPY is used. */
-    /* MISRA Ref 4.7.1 [Return value shall be checked] */
-    /* More details at: https://github.com/FreeRTOS/FreeRTOS-Plus-TCP/blob/main/MISRA.md#directive-47. */
-    /* coverity[misra_c_2012_directive_4_7_violation] */
-    lBytes = FreeRTOS_recvfrom( xSocket, &pucUDPPayload, 0U, FREERTOS_ZERO_COPY, NULL, NULL );
-
-    ( void ) lBytes;
-
-    if( pucUDPPayload != NULL )
-    {
-        FreeRTOS_ReleaseUDPPayloadBuffer( pucUDPPayload );
-    }
 }
 /*-----------------------------------------------------------*/
 

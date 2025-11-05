@@ -294,6 +294,7 @@ static void prvProcessIPEventsAndTimers( void )
 
     iptraceNETWORK_EVENT_RECEIVED( xReceivedEvent.eEventType );
 
+//FreeRTOS_debug_printf( ( "prvProcessIPEventsAndTimers: got event type %d\n", xReceivedEvent.eEventType ) );
     switch( xReceivedEvent.eEventType )
     {
         case eNetworkDownEvent:
@@ -1446,7 +1447,6 @@ BaseType_t xSendEventStructToIPTask( const IPStackEvent_t * pxEvent,
             {
                 uxUseTimeout = ( TickType_t ) 0;
             }
-
             xReturn = xQueueSendToBack( xNetworkEventQueue, pxEvent, uxUseTimeout );
 
             if( xReturn == pdFAIL )
@@ -1695,6 +1695,11 @@ static void prvProcessEthernetPacket( NetworkBufferDescriptor_t * const pxNetwor
         #endif
         {
             /* Interpret the received Ethernet packet. */
+//FreeRTOS_debug_printf( ( "prvProcessEthernetPacket: frame type %d\n", pxEthernetHeader->usFrameType ) );
+//if (pxEthernetHeader->usFrameType)
+//{
+//__asm volatile ("nop");
+//}
             switch( pxEthernetHeader->usFrameType )
             {
                 #if ( ipconfigUSE_IPv4 != 0 )
@@ -1717,7 +1722,6 @@ static void prvProcessEthernetPacket( NetworkBufferDescriptor_t * const pxNetwor
 
                 case ipIPv4_FRAME_TYPE:
                 case ipIPv6_FRAME_TYPE:
-
                     /* The Ethernet frame contains an IP packet. */
                     if( pxNetworkBuffer->xDataLength >= sizeof( IPPacket_t ) )
                     {

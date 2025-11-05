@@ -69,13 +69,16 @@ void test_vSocketBind_TCP( void )
 {
     BaseType_t xReturn;
     FreeRTOS_Socket_t xSocket;
+    struct freertos_sockaddr xBindAddress;
+    size_t uxAddressLength;
     BaseType_t xInternal = pdFALSE;
 
+    memset( &xBindAddress, 0xFC, sizeof( xBindAddress ) );
     memset( &xSocket, 0, sizeof( xSocket ) );
 
     xSocket.ucProtocol = ( uint8_t ) FREERTOS_IPPROTO_TCP;
 
-    xReturn = vSocketBind( &xSocket, NULL, 0, xInternal );
+    xReturn = vSocketBind( &xSocket, NULL, uxAddressLength, xInternal );
 
     TEST_ASSERT_EQUAL( -pdFREERTOS_ERRNO_EADDRNOTAVAIL, xReturn );
 }
@@ -88,6 +91,7 @@ void test_vSocketBind_TCP1( void )
     BaseType_t xReturn;
     FreeRTOS_Socket_t xSocket;
     struct freertos_sockaddr xBindAddress;
+    size_t uxAddressLength;
     BaseType_t xInternal = pdFALSE;
     NetworkEndPoint_t xEndPoint = { 0 };
 
@@ -105,7 +109,7 @@ void test_vSocketBind_TCP1( void )
     vListInsertEnd_Expect( NULL, &( xSocket.xBoundSocketListItem ) );
     vListInsertEnd_IgnoreArg_pxList();
 
-    xReturn = vSocketBind( &xSocket, &xBindAddress, sizeof( xBindAddress ), xInternal );
+    xReturn = vSocketBind( &xSocket, &xBindAddress, uxAddressLength, xInternal );
 
     TEST_ASSERT_EQUAL( 0, xReturn );
 }

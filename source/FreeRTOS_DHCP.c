@@ -224,14 +224,6 @@
                     {
                         FreeRTOS_printf( ( "vDHCPProcess: FreeRTOS_recvfrom returns %d\n", ( int ) lBytes ) );
                     }
-                    else if( lBytes >= 0 )
-                    {
-                        vReleaseSinglePacketFromUDPSocket( EP_DHCPData.xDHCPSocket );
-                    }
-                    else
-                    {
-                        /* do nothing, coverity happy */
-                    }
 
                     break;
                 }
@@ -265,7 +257,7 @@
                     pxIterator = NULL;
                 }
 
-                if( ( pxIterator != NULL ) && ( pxIterator->xDHCPData.eDHCPState == pxIterator->xDHCPData.eExpectedState ) )
+                if( pxIterator != NULL )
                 {
                     /* The second parameter pdTRUE tells to check for a UDP message. */
                     vDHCPProcessEndPoint( pdFALSE, pdTRUE, pxIterator );
@@ -277,7 +269,7 @@
                 }
                 else
                 {
-                    /* Target not found or there is a state mismatch, fetch the message and delete it. */
+                    /* Target not found, fetch the message and delete it. */
                     /* PAss the address of a pointer pucUDPPayload, because zero-copy is used. */
                     lBytes = FreeRTOS_recvfrom( EP_DHCPData.xDHCPSocket, &( pucUDPPayload ), 0, FREERTOS_ZERO_COPY, NULL, NULL );
 
@@ -285,16 +277,7 @@
                     {
                         /* Remove it now, destination not found. */
                         FreeRTOS_ReleaseUDPPayloadBuffer( pucUDPPayload );
-
-                        if( pxIterator == NULL )
-                        {
-                            FreeRTOS_printf( ( "vDHCPProcess: Removed a %d-byte message: target not found\n", ( int ) lBytes ) );
-                        }
-                        else
-                        {
-                            FreeRTOS_printf( ( "vDHCPProcess: Wrong state: expected: %d got: %d : ignore\n",
-                                               pxIterator->xDHCPData.eExpectedState, pxIterator->xDHCPData.eDHCPState ) );
-                        }
+                        FreeRTOS_printf( ( "vDHCPProcess: Removed a %d-byte message: target not found\n", ( int ) lBytes ) );
                     }
                 }
             }
@@ -419,7 +402,7 @@
 
                     if( prvSendDHCPDiscover( pxEndPoint ) == pdPASS )
                     {
-                        FreeRTOS_debug_printf( ( "vDHCPProcess: timeout %lu ticks\n", ( unsigned long ) EP_DHCPData.xDHCPTxPeriod ) );
+                        FreeRTOS_debug_printf( ( "vDHCPProcess: timeout %lu ticks\n", EP_DHCPData.xDHCPTxPeriod ) );
                     }
                     else
                     {
@@ -436,7 +419,7 @@
             }
             else
             {
-                FreeRTOS_debug_printf( ( "vDHCPProcess: giving up %lu > %lu ticks\n", ( unsigned long ) EP_DHCPData.xDHCPTxPeriod, ( unsigned long ) ipconfigMAXIMUM_DISCOVER_TX_PERIOD ) );
+                FreeRTOS_debug_printf( ( "vDHCPProcess: giving up %lu > %lu ticks\n", EP_DHCPData.xDHCPTxPeriod, ipconfigMAXIMUM_DISCOVER_TX_PERIOD ) );
 
                 #if ( ipconfigDHCP_FALL_BACK_AUTO_IP != 0 )
                 {
@@ -506,11 +489,6 @@
                 {
                     /* Give up, start again. */
                     EP_DHCPData.eDHCPState = eInitialWait;
-
-                    /* Reset expected state so that DHCP packets from
-                     * different DHCP servers if available already in the DHCP socket can
-                     * be processed */
-                    EP_DHCPData.eExpectedState = eInitialWait;
                 }
             }
         }
@@ -972,7 +950,7 @@
 
             /* Create the DHCP socket if it has not already been created. */
             prvCreateDHCPSocket( pxEndPoint );
-            FreeRTOS_debug_printf( ( "prvInitialiseDHCP: start after %lu ticks\n", ( unsigned long ) dhcpINITIAL_TIMER_PERIOD ) );
+            FreeRTOS_debug_printf( ( "prvInitialiseDHCP: start after %lu ticks\n", dhcpINITIAL_TIMER_PERIOD ) );
             vDHCP_RATimerReload( pxEndPoint, dhcpINITIAL_TIMER_PERIOD );
         }
         else
@@ -1014,11 +992,6 @@
                         {
                             /* Start again. */
                             EP_DHCPData.eDHCPState = eInitialWait;
-
-                            /* Reset expected state so that DHCP packets from
-                             * different DHCP servers if available already in the DHCP socket can
-                             * be processed */
-                            EP_DHCPData.eExpectedState = eInitialWait;
                         }
                     }
 
@@ -1074,7 +1047,7 @@
                         const void * pvCopySource = &( pxSet->pucByte[ uxByteIndex ] );
                         ( void ) memcpy( pvCopyDest, pvCopySource, sizeof( pxSet->ulParameter ) );
 
-                        if( ( pxSet->ulParameter != FREERTOS_INADDR_ANY ) && ( pxSet->ulParameter != FREERTOS_INADDR_BROADCAST ) )
+                        if( ( pxSet->ulParameter != FREERTOS_INADDR_ANY ) && ( pxSet->ulParameter != ipBROADCAST_IP_ADDRESS ) )
                         {
                             EP_IPv4_SETTINGS.ulDNSServerAddresses[ uxTargetIndex ] = pxSet->ulParameter;
                             uxTargetIndex++;
@@ -1497,7 +1470,7 @@
                              pxEndPoint->xMACAddress.ucBytes, sizeof( MACAddress_t ) );
 
             /* Set the addressing. */
-            pxAddress->sin_address.ulIP_IPv4 = FREERTOS_INADDR_BROADCAST;
+            pxAddress->sin_address.ulIP_IPv4 = ipBROADCAST_IP_ADDRESS;
             pxAddress->sin_port = ( uint16_t ) dhcpSERVER_PORT_IPv4;
             pxAddress->sin_family = FREERTOS_AF_INET4;
         }
@@ -1703,7 +1676,7 @@
             EP_IPv4_SETTINGS.ulIPAddress = EP_DHCPData.ulOfferedIPAddress;
 
             /* Setting the 'local' broadcast address, something like 192.168.1.255' */
-            EP_IPv4_SETTINGS.ulBroadcastAddress = ( EP_DHCPData.ulOfferedIPAddress | ( ~EP_IPv4_SETTINGS.ulNetMask ) );
+            EP_IPv4_SETTINGS.ulBroadcastAddress = ( EP_DHCPData.ulOfferedIPAddress & EP_IPv4_SETTINGS.ulNetMask ) | ~EP_IPv4_SETTINGS.ulNetMask;
 
             /* Close socket to ensure packets don't queue on it. not needed anymore as DHCP failed. but still need timer for ARP testing. */
             prvCloseDHCPSocket( pxEndPoint );

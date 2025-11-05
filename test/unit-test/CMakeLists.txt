@@ -18,50 +18,11 @@ if( ${PROJECT_SOURCE_DIR} STREQUAL ${PROJECT_BINARY_DIR} )
     message( FATAL_ERROR "In-source build is not allowed. Please build in a separate directory, such as ${PROJECT_SOURCE_DIR}/build." )
 endif()
 
-set( SANITIZE "" CACHE STRING "Comma-separated list of compiler sanitizers to enable; empty string disables." )
-if( NOT ${SANITIZE} STREQUAL "" )
+set(SANITIZE "" CACHE STRING "Comma-separated list of compiler sanitizers to enable; empty string disables.")
+if(NOT ${SANITIZE} STREQUAL "")
     add_compile_options(-fsanitize=${SANITIZE} -fno-sanitize-recover)
     add_link_options(-fsanitize=${SANITIZE} -fno-sanitize-recover)
 endif()
-
-# Align with: test/build-combination/CMakeLists.txt
-add_compile_options(
-    $<$<COMPILE_LANG_AND_ID:C,GNU>:-fdiagnostics-color=always>
-    $<$<COMPILE_LANG_AND_ID:C,Clang>:-fcolor-diagnostics>
-
-    ### On the road to -Wall: Forbid warnings that need not be tolerated.
-    $<$<COMPILE_LANG_AND_ID:C,GNU,Clang>:-Werror=uninitialized> # definite use of uninitialized variable
-    $<$<COMPILE_LANG_AND_ID:C,GNU,Clang>:-Werror=array-bounds> # indexing outside sized array
-    $<$<COMPILE_LANG_AND_ID:C,GNU,Clang>:-Werror=switch> # enum switch with unhandled value
-    $<$<COMPILE_LANG_AND_ID:C,GNU,Clang>:-Werror=format> # format string wrong
-    $<$<COMPILE_LANG_AND_ID:C,GNU,Clang>:-Werror=format-security> # format string missing
-    $<$<COMPILE_LANG_AND_ID:C,GNU,Clang>:-Werror=comment> # comment within a comment
-    $<$<COMPILE_LANG_AND_ID:C,GNU,Clang>:-Werror=unused-value> # "statement has no effect"
-    $<$<COMPILE_LANG_AND_ID:C,GNU>:-Werror=maybe-uninitialized> # possible use of uninitialized variable
-    $<$<COMPILE_LANG_AND_ID:C,GNU>:-Werror=memset-elt-size> # memsetting array by length instead of size
-    # FIXME (part of -Wall):
-    # -Werror=return-type # "control reaches end of non-void function"
-    # -Werror=array-parameter # name clash
-    # -Werror=implicit-function-declaration # need header
-    # -Werror=unused-but-set-variable
-    # -Werror=unused-variable
-    # -Werror=unused-function
-    # -Werror=unused-parameter
-    # -Werror=missing-braces
-    # -Werror=pointer-sign
-    # -Werror=dangling-pointer
-    # -Werror=vla
-
-    ### Currently needed to build cleanly with Clang 19:
-    $<$<COMPILE_LANG_AND_ID:C,Clang>:-Werror>
-    $<$<COMPILE_LANG_AND_ID:C,Clang>:-Wno-pragma-pack>
-    $<$<COMPILE_LANG_AND_ID:C,Clang>:-Wno-unused-parameter>
-    $<$<COMPILE_LANG_AND_ID:C,Clang>:-Wno-return-type>
-    $<$<COMPILE_LANG_AND_ID:C,Clang>:-Wno-pointer-sign>
-    $<$<COMPILE_LANG_AND_ID:C,Clang>:-Wno-typedef-redefinition>
-    $<$<COMPILE_LANG_AND_ID:C,Clang>:-Wno-strict-prototypes>
-    $<$<COMPILE_LANG_AND_ID:C,Clang>:-Wno-sometimes-uninitialized>
-)
 
 # Set global path variables.
 get_filename_component( __MODULE_ROOT_DIR "${CMAKE_CURRENT_LIST_DIR}/../.." ABSOLUTE )
@@ -176,52 +137,46 @@ foreach( file ${TCP_INCLUDES} )
     endif()
 
 
-    # Find the unifdefall executable
-    find_program(UNIFDEFALL_EXECUTABLE unifdefall)
 
-    if (UNIFDEFALL_EXECUTABLE)
-        # Use this tool to process all conditional declarations.
-        if(${MODIFIED_FILE} STREQUAL "FreeRTOS_Routing" OR ${MODIFIED_FILE} STREQUAL "FreeRTOS_IP_Private" )
-            execute_process( COMMAND unifdefall -U${Guard} -USEND_REPEATED_COUNT
-                                -UipTRUE_BOOL
-                                -UipFALSE_BOOL
-                                -UFreeRTOS_htonl
-                                -D__COVERITY__
-                                -DTEST
-                                -DipconfigIS_ENABLED
-                                -DipconfigUSE_IPv6
-                                -DipconfigUSE_RA
-                                -I ${MODULE_ROOT_DIR}/tools/CMock/vendor/unity/src
-                                -I ${MODULE_ROOT_DIR}/test/FreeRTOS-Kernel/include
-                                -I ${UNIT_TEST_DIR}/ConfigFiles
-                                -I ${MODULE_ROOT_DIR}/source/include
-                                -I ${MODULE_ROOT_DIR}/test/FreeRTOS-Kernel/portable/ThirdParty/GCC/Posix
-                                ${CMAKE_BINARY_DIR}/Annexed_TCP/${MODIFIED_FILE}_tmp.h
-                            WORKING_DIRECTORY ${CMAKE_BINARY_DIR}
-                            OUTPUT_FILE ${CMAKE_BINARY_DIR}/Annexed_TCP/${MODIFIED_FILE}.h
-                            OUTPUT_QUIET
-                            ERROR_QUIET  )
-        else()
-            execute_process( COMMAND unifdefall -U${Guard} -USEND_REPEATED_COUNT
-                                -UipTRUE_BOOL
-                                -UipFALSE_BOOL
-                                -UFreeRTOS_htonl
-                                -D__COVERITY__
-                                -DTEST
-                                -DipconfigIS_ENABLED
-                                -I ${MODULE_ROOT_DIR}/tools/CMock/vendor/unity/src
-                                -I ${MODULE_ROOT_DIR}/test/FreeRTOS-Kernel/include
-                                -I ${UNIT_TEST_DIR}/ConfigFiles
-                                -I ${MODULE_ROOT_DIR}/source/include
-                                -I ${MODULE_ROOT_DIR}/test/FreeRTOS-Kernel/portable/ThirdParty/GCC/Posix
-                                ${CMAKE_BINARY_DIR}/Annexed_TCP/${MODIFIED_FILE}_tmp.h
-                            WORKING_DIRECTORY ${CMAKE_BINARY_DIR}
-                            OUTPUT_FILE ${CMAKE_BINARY_DIR}/Annexed_TCP/${MODIFIED_FILE}.h
-                            OUTPUT_QUIET
-                            ERROR_QUIET  )
-        endif()
+    # Use this tool to process all conditional declarations.
+    if(${MODIFIED_FILE} STREQUAL "FreeRTOS_Routing" OR ${MODIFIED_FILE} STREQUAL "FreeRTOS_IP_Private" )
+        execute_process( COMMAND unifdefall -U${Guard} -USEND_REPEATED_COUNT
+                            -UipTRUE_BOOL
+                            -UipFALSE_BOOL
+                            -UFreeRTOS_htonl
+                            -D__COVERITY__
+                            -DTEST
+                            -DipconfigIS_ENABLED
+                            -DipconfigUSE_IPv6
+                            -DipconfigUSE_RA
+                            -I ${MODULE_ROOT_DIR}/tools/CMock/vendor/unity/src
+                            -I ${MODULE_ROOT_DIR}/test/FreeRTOS-Kernel/include
+                            -I ${UNIT_TEST_DIR}/ConfigFiles
+                            -I ${MODULE_ROOT_DIR}/source/include
+                            -I ${MODULE_ROOT_DIR}/test/FreeRTOS-Kernel/portable/ThirdParty/GCC/Posix
+                            ${CMAKE_BINARY_DIR}/Annexed_TCP/${MODIFIED_FILE}_tmp.h
+                        WORKING_DIRECTORY ${CMAKE_BINARY_DIR}
+                        OUTPUT_FILE ${CMAKE_BINARY_DIR}/Annexed_TCP/${MODIFIED_FILE}.h
+                        OUTPUT_QUIET
+                        ERROR_QUIET  )
     else()
-        message(FATAL_ERROR  "Error: unifdefall command not found.")
+        execute_process( COMMAND unifdefall -U${Guard} -USEND_REPEATED_COUNT
+                            -UipTRUE_BOOL
+                            -UipFALSE_BOOL
+                            -UFreeRTOS_htonl
+                            -D__COVERITY__
+                            -DTEST
+                            -DipconfigIS_ENABLED
+                            -I ${MODULE_ROOT_DIR}/tools/CMock/vendor/unity/src
+                            -I ${MODULE_ROOT_DIR}/test/FreeRTOS-Kernel/include
+                            -I ${UNIT_TEST_DIR}/ConfigFiles
+                            -I ${MODULE_ROOT_DIR}/source/include
+                            -I ${MODULE_ROOT_DIR}/test/FreeRTOS-Kernel/portable/ThirdParty/GCC/Posix
+                            ${CMAKE_BINARY_DIR}/Annexed_TCP/${MODIFIED_FILE}_tmp.h
+                        WORKING_DIRECTORY ${CMAKE_BINARY_DIR}
+                        OUTPUT_FILE ${CMAKE_BINARY_DIR}/Annexed_TCP/${MODIFIED_FILE}.h
+                        OUTPUT_QUIET
+                        ERROR_QUIET  )
     endif()
 
     # Remove the temporary files

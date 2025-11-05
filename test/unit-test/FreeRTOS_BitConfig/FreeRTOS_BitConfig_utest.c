@@ -158,6 +158,7 @@ void test_xBitConfig_read_uc_xHasError( void )
 void test_xBitConfig_read_uc_OutOfBoundRead( void )
 {
     BitConfig_t xConfig, * pxConfig = &xConfig;
+    uint8_t * pucData;
     BaseType_t xResult = pdFALSE;
 
     memset( pxConfig, 0, sizeof( BitConfig_t ) );
@@ -165,7 +166,7 @@ void test_xBitConfig_read_uc_OutOfBoundRead( void )
     pxConfig->uxIndex = 1;
     pxConfig->uxSize = SIZE_OF_BINARY_STREAM;
 
-    xResult = xBitConfig_read_uc( pxConfig, NULL, SIZE_OF_BINARY_STREAM );
+    xResult = xBitConfig_read_uc( pxConfig, pucData, SIZE_OF_BINARY_STREAM );
 
     TEST_ASSERT_EQUAL( pdFALSE, xResult );
     TEST_ASSERT_EQUAL( pdTRUE, pxConfig->xHasError );
@@ -462,13 +463,13 @@ void test_ulBitConfig_read_32_HappyPath( void )
 
 void test_vBitConfig_write_uc_xHasError( void )
 {
-    BitConfig_t xConfig = { 0 };
+    BitConfig_t xConfig;
+    uint8_t * pucData;
 
+    memset( &xConfig, 0, sizeof( BitConfig_t ) );
     xConfig.xHasError = pdTRUE;
 
-    vBitConfig_write_uc( &xConfig, NULL, SIZE_OF_BINARY_STREAM );
-
-    TEST_ASSERT_EQUAL( pdTRUE, xConfig.xHasError );
+    vBitConfig_write_uc( &xConfig, pucData, SIZE_OF_BINARY_STREAM );
 }
 
 /**
@@ -479,13 +480,15 @@ void test_vBitConfig_write_uc_xHasError( void )
 
 void test_vBitConfig_write_uc_OutOfBoundWrite( void )
 {
-    BitConfig_t xConfig = { 0 };
+    BitConfig_t xConfig;
+    uint8_t * pucData;
 
+    memset( &xConfig, 0, sizeof( BitConfig_t ) );
     xConfig.xHasError = pdFALSE;
     xConfig.uxIndex = SIZE_OF_BINARY_STREAM;
     xConfig.uxSize = SIZE_OF_BINARY_STREAM;
 
-    vBitConfig_write_uc( &xConfig, NULL, SIZE_OF_BINARY_STREAM );
+    vBitConfig_write_uc( &xConfig, pucData, SIZE_OF_BINARY_STREAM );
 
     TEST_ASSERT_EQUAL( pdTRUE, xConfig.xHasError );
 }

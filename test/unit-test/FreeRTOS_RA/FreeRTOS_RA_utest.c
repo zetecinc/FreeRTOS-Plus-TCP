@@ -103,11 +103,12 @@ const IPv6_Address_t xDefaultIPAddress =
 void test_vNDSendRouterSolicitation_NullEndpoint( void )
 {
     NetworkBufferDescriptor_t * pxNetworkBuffer, xNetworkBuffer;
+    IPv6_Address_t * pxIPAddress;
 
     pxNetworkBuffer = &xNetworkBuffer;
     pxNetworkBuffer->pxEndPoint = NULL;
 
-    catch_assert( vNDSendRouterSolicitation( pxNetworkBuffer, NULL ) );
+    catch_assert( vNDSendRouterSolicitation( pxNetworkBuffer, pxIPAddress ) );
 }
 
 /**
@@ -118,12 +119,13 @@ void test_vNDSendRouterSolicitation_FalsebIPv6( void )
 {
     NetworkBufferDescriptor_t * pxNetworkBuffer, xNetworkBuffer;
     NetworkEndPoint_t xEndPoint;
+    IPv6_Address_t * pxIPAddress, xIPAddress;
 
     pxNetworkBuffer = &xNetworkBuffer;
     pxNetworkBuffer->pxEndPoint = &xEndPoint;
     xEndPoint.bits.bIPv6 = pdFALSE_UNSIGNED;
 
-    catch_assert( vNDSendRouterSolicitation( pxNetworkBuffer, NULL ) );
+    catch_assert( vNDSendRouterSolicitation( pxNetworkBuffer, pxIPAddress ) );
 }
 
 /**
@@ -291,7 +293,7 @@ void test_vNDSendRouterSolicitation_HappyPath( void )
 void test_vReceiveNA_NoEndPoint( void )
 {
     NetworkBufferDescriptor_t * pxNetworkBuffer, xNetworkBuffer;
-    NetworkEndPoint_t xEndPoint = { 0 };
+    NetworkEndPoint_t xEndPoint;
     ICMPPacket_IPv6_t xICMPPacket;
 
     memset( &xNetworkBuffer, 0, sizeof( NetworkBufferDescriptor_t ) );

@@ -68,9 +68,9 @@
 #endif /* ( ipconfigNETWORK_MTU > 1526 ) */
 
 #if ( USE_JUMBO_FRAMES == 1 )
-    #define dmaRX_TX_BUFFER_SIZE    ( 10240 - ipBUFFER_PADDING )
+    #define dmaRX_TX_BUFFER_SIZE    10240
 #else
-    #define dmaRX_TX_BUFFER_SIZE    ( 1536 - ipBUFFER_PADDING )
+    #define dmaRX_TX_BUFFER_SIZE    1536
 #endif /* ( USE_JUMBO_FRAMES == 1 ) */
 
 extern XScuGic xInterruptController;
@@ -405,7 +405,7 @@ BaseType_t xMayAcceptPacket( uint8_t * pucEthernetBuffer )
 
         /* Ensure that the incoming packet is not fragmented (only outgoing packets
          * can be fragmented) as these are the only handled IP frames currently. */
-        if( ( pxIPHeader->usFragmentOffset & ipFRAGMENT_OFFSET_BIT_MASK ) != 0U )
+        if( ( pxIPHeader->usFragmentOffset & FreeRTOS_ntohs( ipFRAGMENT_OFFSET_BIT_MASK ) ) != 0U )
         {
             return pdFALSE;
         }

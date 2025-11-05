@@ -51,7 +51,6 @@
 #include "mock_FreeRTOS_DHCP.h"
 #include "mock_FreeRTOS_DHCPv6.h"
 #include "mock_FreeRTOS_Routing.h"
-#include "mock_FreeRTOS_Sockets.h"
 #include "mock_FreeRTOS_IPv4_Utils.h"
 #include "mock_FreeRTOS_IPv6_Utils.h"
 #include "mock_NetworkBufferManagement.h"
@@ -124,7 +123,7 @@ void test_pxDuplicateNetworkBufferWithDescriptor_NULLReturned( void )
 {
     NetworkBufferDescriptor_t * pxReturn;
     NetworkBufferDescriptor_t * pxNetworkBuffer, xNetworkBuffer;
-    size_t uxNewLength = 0;
+    size_t uxNewLength;
 
     pxNetworkBuffer = &xNetworkBuffer;
 
@@ -288,8 +287,10 @@ void test_pxDuplicateNetworkBufferWithDescriptor_IPv6( void )
 void test_prvPacketBuffer_to_NetworkBuffer_NULLParam( void )
 {
     NetworkBufferDescriptor_t * pxNetworkBuffer;
+    const void * pvBuffer = NULL;
+    size_t uxOffset;
 
-    pxNetworkBuffer = prvPacketBuffer_to_NetworkBuffer( NULL, 0 );
+    pxNetworkBuffer = prvPacketBuffer_to_NetworkBuffer( pvBuffer, uxOffset );
 
     TEST_ASSERT_EQUAL( NULL, pxNetworkBuffer );
 }
@@ -819,7 +820,7 @@ void test_usGenerateProtocolChecksum_InvalidLength( void )
     uint16_t usReturn;
     uint8_t pucEthernetBuffer[ ipconfigTCP_MSS ];
     size_t uxBufferLength = sizeof( IPPacket_t ) - 1;
-    BaseType_t xOutgoingPacket = pdFALSE;
+    BaseType_t xOutgoingPacket;
 
     memset( pucEthernetBuffer, 0, ipconfigTCP_MSS );
     ( ( IPPacket_t * ) pucEthernetBuffer )->xEthernetHeader.usFrameType = ipIPv4_FRAME_TYPE;
@@ -3330,36 +3331,4 @@ void test_eGetDHCPState( void )
         eReturn = eGetDHCPState( &xEndPoint );
         TEST_ASSERT_EQUAL( i, eReturn );
     }
-}
-
-/**
- * @brief Test vReleaseSinglePacketFromUDPSocket
- * To validate if vReleaseSinglePacketFromUDPSocket
- * releases the buffer in happy path case.
- */
-void test_vReleaseSinglePacketFromUDPSocket_HappyPath( void )
-{
-    struct xSOCKET xSocket;
-
-    /* Get a stub. */
-    FreeRTOS_recvfrom_Stub( FreeRTOS_recvfrom_StubHappyPath );
-
-    FreeRTOS_ReleaseUDPPayloadBuffer_Expect( RELEASE_UDP_SOCKET_NETWORK_BUFFER_ADDRESS );
-
-    vReleaseSinglePacketFromUDPSocket( &xSocket );
-}
-
-/**
- * @brief Test vReleaseSinglePacketFromUDPSocket
- * To validate if vReleaseSinglePacketFromUDPSocket does not try to
- * release the buffer if receive from fails.
- */
-void test_vReleaseSinglePacketFromUDPSocket_NonHappyPath( void )
-{
-    struct xSOCKET xSocket;
-
-    /* Get a stub. */
-    FreeRTOS_recvfrom_Stub( FreeRTOS_recvfrom_StubNonHappyPath );
-
-    vReleaseSinglePacketFromUDPSocket( &xSocket );
 }

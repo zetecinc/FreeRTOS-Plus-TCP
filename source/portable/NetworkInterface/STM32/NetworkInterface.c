@@ -25,6 +25,8 @@
  * http://www.FreeRTOS.org
  */
 
+/* Significant edits by markh 11 July 2025 to minimize STMicro HAL cruft */
+
 /*---------------------------------------------------------------------------*/
 
 /* Standard includes. */
@@ -56,6 +58,9 @@
 #include "NetworkInterface.h"
 #include "phyHandling.h"
 
+#define STM32H7  // markh 11jul25
+#include "stm32h7xx.h"  // markh 15jul25: added because we access registers directly in this file
+
 /* ST includes. */
 #if defined( STM32F4 )
     #include "stm32f4xx_hal.h"
@@ -70,6 +75,7 @@
 #else
     #error "Unknown STM32 Family for NetworkInterface"
 #endif /* if defined( STM32F4 ) */
+
 
 /*---------------------------------------------------------------------------*/
 /*===========================================================================*/
@@ -87,9 +93,9 @@
 #define niEMAC_TASK_PRIORITY              ( configMAX_PRIORITIES - 1 )
 #define niEMAC_TASK_STACK_SIZE            ( 4U * configMINIMAL_STACK_SIZE )
 
-#define niEMAC_TX_DESC_SECTION            ".TxDescripSection"
-#define niEMAC_RX_DESC_SECTION            ".RxDescripSection"
-#define niEMAC_BUFFERS_SECTION            ".EthBuffersSection"
+#define niEMAC_TX_DESC_SECTION            ".EthTxDescriptors"
+#define niEMAC_RX_DESC_SECTION            ".EthRxDescriptors"
+#define niEMAC_BUFFERS_SECTION            ".EthBuffers"
 
 #define niEMAC_TASK_MAX_BLOCK_TIME_MS     100U
 #define niEMAC_TX_MAX_BLOCK_TIME_MS       20U
@@ -602,8 +608,9 @@ static BaseType_t prvNetworkInterfaceOutput( NetworkInterface_t * pxInterface,
             break;
         }
 
-        /* ETH_TxPacketConfigTypeDef */
-        ETH_TxPacketConfig xTxConfig =
+        // ETH_TxPacketConfigTypeDef
+//        ETH_TxPacketConfig xTxConfig =    markh 14jul25 fix for newer HAL version
+        ETH_TxPacketConfigTypeDef xTxConfig =
         {
             .CRCPadCtrl = ETH_CRC_PAD_INSERT,
             .Attributes = ETH_TX_PACKETS_FEATURES_CRCPAD,
@@ -1072,7 +1079,9 @@ static BaseType_t prvEthConfigInit( ETH_HandleTypeDef * pxEthHandle,
         if( NVIC_GetEnableIRQ( ETH_IRQn ) == 0 )
         {
             FreeRTOS_debug_printf( ( "prvEthConfigInit: ETH_IRQn was not enabled by application\n" ) );
-            HAL_NVIC_EnableIRQ( ETH_IRQn );
+            // markh 11jul25: change HAL call to standard CMSIS
+            //HAL_NVIC_EnableIRQ( ETH_IRQn );
+            NVIC_EnableIRQ( ETH_IRQn );
         }
 
         #ifdef niEMAC_STM32FX
@@ -1082,9 +1091,11 @@ static BaseType_t prvEthConfigInit( ETH_HandleTypeDef * pxEthHandle,
             configASSERT( __HAL_RCC_ETHTX_IS_CLK_ENABLED() != 0 );
             configASSERT( __HAL_RCC_ETHRX_IS_CLK_ENABLED() != 0 );
         #elif defined( STM32H7 )
-            configASSERT( __HAL_RCC_ETH1MAC_IS_CLK_ENABLED() != 0 );
-            configASSERT( __HAL_RCC_ETH1TX_IS_CLK_ENABLED() != 0 );
-            configASSERT( __HAL_RCC_ETH1RX_IS_CLK_ENABLED() != 0 );
+            // markh 14jul25: remove these asserts because we are not using the RCC HAL module
+            // (I have verified the asserts by hand)
+            //configASSERT( __HAL_RCC_ETH1MAC_IS_CLK_ENABLED() != 0 );
+            //configASSERT( __HAL_RCC_ETH1TX_IS_CLK_ENABLED() != 0 );
+            //configASSERT( __HAL_RCC_ETH1RX_IS_CLK_ENABLED() != 0 );
         #endif
     }
 
@@ -1178,8 +1189,8 @@ static void prvInitMacAddresses( ETH_HandleTypeDef * pxEthHandle,
                         xL3FilterConfig.DestAddrFilterMatch = ETH_L3_DEST_ADDR_PERFECT_MATCH_ENABLE;
                         xL3FilterConfig.SrcAddrHigherBitsMatch = 0x1FU;
                         xL3FilterConfig.DestAddrHigherBitsMatch = 0x1FU;
-                        xL3FilterConfig.Ip4SrcAddr = FREERTOS_INADDR_BROADCAST;
-                        xL3FilterConfig.Ip4DestAddr = FREERTOS_INADDR_BROADCAST;
+                        xL3FilterConfig.Ip4SrcAddr = ipBROADCAST_IP_ADDRESS;
+                        xL3FilterConfig.Ip4DestAddr = ipBROADCAST_IP_ADDRESS;
                         ( void ) HAL_ETHEx_SetL3FilterConfig( pxEthHandle, ETH_L3_FILTER_0, &xL3FilterConfig );
                     #endif /* if ipconfigIS_DISABLED( ipconfigUSE_IPv4 ) */
 
@@ -1923,30 +1934,30 @@ void HAL_ETH_RxLinkCallback( void ** ppvStart,
     if( prvAcceptPacket( pxCurDescriptor, usLength ) == pdTRUE )
     {
         pxCurDescriptor->xDataLength = usLength;
-        #if ipconfigIS_ENABLED( ipconfigUSE_LINKED_RX_MESSAGES )
-            pxCurDescriptor->pxNextBuffer = NULL;
-        #endif
+    #if ipconfigIS_ENABLED( ipconfigUSE_LINKED_RX_MESSAGES )
+        pxCurDescriptor->pxNextBuffer = NULL;
+    #endif
 
         if( *ppxStartDescriptor == NULL )
         {
             *ppxStartDescriptor = pxCurDescriptor;
         }
 
-        #if ipconfigIS_ENABLED( ipconfigUSE_LINKED_RX_MESSAGES )
-            else if( ppxEndDescriptor != NULL )
-            {
-                ( *ppxEndDescriptor )->pxNextBuffer = pxCurDescriptor;
-            }
-        #endif
+    #if ipconfigIS_ENABLED( ipconfigUSE_LINKED_RX_MESSAGES )
+        else if( ppxEndDescriptor != NULL )
+        {
+            ( *ppxEndDescriptor )->pxNextBuffer = pxCurDescriptor;
+        }
+    #endif
         *ppxEndDescriptor = pxCurDescriptor;
         /* Only single buffer packets are supported */
         configASSERT( *ppxStartDescriptor == *ppxEndDescriptor );
-        #ifdef niEMAC_CACHEABLE
-            if( niEMAC_CACHE_MAINTENANCE != 0 )
-            {
-                SCB_InvalidateDCache_by_Addr( ( uint32_t * ) pucBuff, usLength );
-            }
-        #endif
+    #ifdef niEMAC_CACHEABLE
+        if( niEMAC_CACHE_MAINTENANCE != 0 )
+        {
+            //SCB_InvalidateDCache_by_Addr( ( uint32_t * ) pucBuff, usLength );
+        }
+    #endif
     }
     else
     {
@@ -1971,7 +1982,7 @@ void HAL_ETH_TxFreeCallback( uint32_t * pulBuff )
 /*===========================================================================*/
 /*---------------------------------------------------------------------------*/
 
-size_t uxNetworkInterfaceAllocateRAMToBuffers( NetworkBufferDescriptor_t pxNetworkBuffers[ ipconfigNUM_NETWORK_BUFFER_DESCRIPTORS ] )
+void vNetworkInterfaceAllocateRAMToBuffers( NetworkBufferDescriptor_t pxNetworkBuffers[ ipconfigNUM_NETWORK_BUFFER_DESCRIPTORS ] )
 {
     static uint8_t ucNetworkPackets[ ipconfigNUM_NETWORK_BUFFER_DESCRIPTORS ][ niEMAC_TOTAL_BUFFER_SIZE ] __ALIGNED( niEMAC_BUF_ALIGNMENT ) __attribute__( ( section( niEMAC_BUFFERS_SECTION ) ) );
 
@@ -1985,8 +1996,6 @@ size_t uxNetworkInterfaceAllocateRAMToBuffers( NetworkBufferDescriptor_t pxNetwo
         pxNetworkBuffers[ uxIndex ].pucEthernetBuffer = &( ucNetworkPackets[ uxIndex ][ ipBUFFER_PADDING ] );
         *( ( uint32_t * ) &( ucNetworkPackets[ uxIndex ][ 0 ] ) ) = ( uint32_t ) ( &( pxNetworkBuffers[ uxIndex ] ) );
     }
-
-    return (niEMAC_TOTAL_BUFFER_SIZE - ipBUFFER_PADDING);
 }
 
 /*---------------------------------------------------------------------------*/
@@ -2000,7 +2009,7 @@ NetworkInterface_t * pxSTM32_FillInterfaceDescriptor( BaseType_t xEMACIndex,
 {
     static char pcName[ 17 ];
 
-    ( void ) snprintf( pcName, sizeof( pcName ), "eth%u", ( unsigned ) xEMACIndex );
+    //( void ) snprintf( pcName, sizeof( pcName ), "eth%u", ( unsigned ) xEMACIndex );
 
     ( void ) memset( pxInterface, '\0', sizeof( *pxInterface ) );
     pxInterface->pcName = pcName;
@@ -2029,156 +2038,36 @@ NetworkInterface_t * pxSTM32_FillInterfaceDescriptor( BaseType_t xEMACIndex,
     NetworkInterface_t * pxFillInterfaceDescriptor( BaseType_t xEMACIndex,
                                                     NetworkInterface_t * pxInterface )
     {
-        return pxSTM32_FillInterfaceDescriptor( xEMACIndex, pxInterface );
+        pxSTM32_FillInterfaceDescriptor( xEMACIndex, pxInterface );
     }
 
 #endif
 
-/*---------------------------------------------------------------------------*/
-/*===========================================================================*/
-/*                          Sample HAL User Functions                        */
-/*===========================================================================*/
-/*---------------------------------------------------------------------------*/
-
-#if 0
+/*-----------------------------------------------------------------------*/
+/*=======================================================================*/
+/*   HAL init function (deinit is never called, so not provided---yet)   */
+/*   markh 15jul25                                                       */
+/*=======================================================================*/
+/*-----------------------------------------------------------------------*/
 
 /**
  * @brief  Initializes the ETH MSP.
  * @param  heth: ETH handle
  * @retval None
  */
-    void HAL_ETH_MspInit( ETH_HandleTypeDef * pxEthHandle )
+void HAL_ETH_MspInit( ETH_HandleTypeDef * pxEthHandle )
+{
+    if( pxEthHandle->Instance == ETH )
     {
-        if( pxEthHandle->Instance == ETH )
-        {
-            /* Enable ETHERNET clock */
-            #ifdef niEMAC_STM32FX
-                __HAL_RCC_ETH_CLK_ENABLE();
-            #elif defined( STM32H5 )
-                __HAL_RCC_ETH_CLK_ENABLE();
-                __HAL_RCC_ETHTX_CLK_ENABLE();
-                __HAL_RCC_ETHRX_CLK_ENABLE();
-            #elif defined( STM32H7 )
-                __HAL_RCC_ETH1MAC_CLK_ENABLE();
-                __HAL_RCC_ETH1TX_CLK_ENABLE();
-                __HAL_RCC_ETH1RX_CLK_ENABLE();
-            #endif
+        // Enable clocks to Ethernet peripheral (MAC, TX, and RX parts); GPIO ports and pinmux are set in DPins.
+        RCC->AHB1ENR |= (RCC_AHB1ENR_ETH1MACEN | RCC_AHB1ENR_ETH1TXEN | RCC_AHB1ENR_ETH1RXEN);
 
-            /* Enable GPIOs clocks */
-            __HAL_RCC_GPIOA_CLK_ENABLE();
-            __HAL_RCC_GPIOB_CLK_ENABLE();
-            __HAL_RCC_GPIOC_CLK_ENABLE();
-            __HAL_RCC_GPIOD_CLK_ENABLE();
-            __HAL_RCC_GPIOE_CLK_ENABLE();
-            __HAL_RCC_GPIOF_CLK_ENABLE();
-            __HAL_RCC_GPIOG_CLK_ENABLE();
-            __HAL_RCC_GPIOH_CLK_ENABLE();
-
-            /* Ethernet pins configuration ************************************************/
-
-            /*
-             *  Common Pins
-             *  ETH_MDC ----------------------> ETH_MDC_Port, ETH_MDC_Pin
-             *  ETH_MDIO --------------------->
-             *  ETH_RXD0 --------------------->
-             *  ETH_RXD1 --------------------->
-             *  ETH_TX_EN -------------------->
-             *  ETH_TXD0 --------------------->
-             *  ETH_TXD1 --------------------->
-             *
-             *  RMII Specific Pins
-             *  ETH_REF_CLK ------------------>
-             *  ETH_CRS_DV ------------------->
-             *
-             *  MII Specific Pins
-             *  ETH_RX_CLK ------------------->
-             *  ETH_RX_ER -------------------->
-             *  ETH_RX_DV -------------------->
-             *  ETH_RXD2 --------------------->
-             *  ETH_RXD3 --------------------->
-             *  ETH_TX_CLK ------------------->
-             *  ETH_TXD2 --------------------->
-             *  ETH_TXD3 --------------------->
-             *  ETH_CRS ---------------------->
-             *  ETH_COL ---------------------->
-             */
-
-            GPIO_InitTypeDef GPIO_InitStructure = { 0 };
-            GPIO_InitStructure.Speed = GPIO_SPEED_HIGH;
-            GPIO_InitStructure.Mode = GPIO_MODE_AF_PP;
-            GPIO_InitStructure.Pull = GPIO_NOPULL;
-            GPIO_InitStructure.Alternate = GPIO_AF11_ETH;
-
-            GPIO_InitStructure.Pin = ETH_MDC_Pin;
-            GPIO_InitStructure.Speed = GPIO_SPEED_MEDIUM;
-            HAL_GPIO_Init( ETH_MDC_Port, &GPIO_InitStructure );
-            GPIO_InitStructure.Speed = GPIO_SPEED_HIGH;
-
-            GPIO_InitStructure.Pin = ETH_MDIO_Pin;
-            HAL_GPIO_Init( ETH_MDIO_Port, &GPIO_InitStructure );
-
-            GPIO_InitStructure.Pin = ETH_RXD0_Pin;
-            HAL_GPIO_Init( ETH_RXD0_Port, &GPIO_InitStructure );
-
-            GPIO_InitStructure.Pin = ETH_RXD1_Pin;
-            HAL_GPIO_Init( ETH_RXD1_Port, &GPIO_InitStructure );
-
-            GPIO_InitStructure.Pin = ETH_TX_EN_Pin;
-            HAL_GPIO_Init( ETH_TX_EN_Port, &GPIO_InitStructure );
-
-            GPIO_InitStructure.Pin = ETH_TXD0_Pin;
-            HAL_GPIO_Init( ETH_TXD0_Port, &GPIO_InitStructure );
-
-            GPIO_InitStructure.Pin = ETH_TXD1_Pin;
-            HAL_GPIO_Init( ETH_TXD1_Port, &GPIO_InitStructure );
-
-            if( pxEthHandle->Init.MediaInterface == HAL_ETH_RMII_MODE )
-            {
-                GPIO_InitStructure.Pin = ETH_REF_CLK_Pin;
-                HAL_GPIO_Init( ETH_REF_CLK_Port, &GPIO_InitStructure );
-
-                GPIO_InitStructure.Pin = ETH_CRS_DV_Pin;
-                HAL_GPIO_Init( ETH_CRS_DV_Port, &GPIO_InitStructure );
-            }
-            else if( pxEthHandle->Init.MediaInterface == HAL_ETH_MII_MODE )
-            {
-                GPIO_InitStructure.Pin = ETH_RX_CLK_Pin;
-                HAL_GPIO_Init( ETH_RX_CLK_Port, &GPIO_InitStructure );
-
-                GPIO_InitStructure.Pin = ETH_RX_ER_Pin;
-                HAL_GPIO_Init( ETH_RX_ER_Port, &GPIO_InitStructure );
-
-                GPIO_InitStructure.Pin = ETH_RX_DV_Pin;
-                HAL_GPIO_Init( ETH_RX_DV_Port, &GPIO_InitStructure );
-
-                GPIO_InitStructure.Pin = ETH_RXD2_Pin;
-                HAL_GPIO_Init( ETH_RXD2_Port, &GPIO_InitStructure );
-
-                GPIO_InitStructure.Pin = ETH_RXD3_Pin;
-                HAL_GPIO_Init( ETH_RXD3_Port, &GPIO_InitStructure );
-
-                GPIO_InitStructure.Pin = ETH_TX_CLK_Pin;
-                HAL_GPIO_Init( ETH_TX_CLK_Port, &GPIO_InitStructure );
-
-                GPIO_InitStructure.Pin = ETH_TXD2_Pin;
-                HAL_GPIO_Init( ETH_TXD2_Port, &GPIO_InitStructure );
-
-                GPIO_InitStructure.Pin = ETH_TXD3_Pin;
-                HAL_GPIO_Init( ETH_TXD3_Port, &GPIO_InitStructure );
-
-                GPIO_InitStructure.Pin = ETH_COL_Pin;
-                HAL_GPIO_Init( ETH_COL_Port, &GPIO_InitStructure );
-
-                GPIO_InitStructure.Pin = ETH_CRS_Pin;
-                HAL_GPIO_Init( ETH_CRS_Port, &GPIO_InitStructure );
-            }
-
-            /* Enable the Ethernet global Interrupt */
-            HAL_NVIC_SetPriority( ETH_IRQn, ( uint32_t ) configMAX_SYSCALL_INTERRUPT_PRIORITY, 0 );
-            HAL_NVIC_EnableIRQ( ETH_IRQn );
-        }
+        // Enable the Ethernet interrupt (priority set with others in main.cpp)
+        NVIC_EnableIRQ(ETH_IRQn);
     }
+}
 
+#if 0
 /*---------------------------------------------------------------------------*/
 
     void HAL_ETH_MspDeInit( ETH_HandleTypeDef * pxEthHandle )
@@ -2258,53 +2147,4 @@ NetworkInterface_t * pxSTM32_FillInterfaceDescriptor( BaseType_t xEMACIndex,
     }
 
 /*---------------------------------------------------------------------------*/
-
-    #if defined( __MPU_PRESENT ) && ( __MPU_PRESENT == 1U )
-
-        void MPU_Config( void )
-        {
-            MPU_Region_InitTypeDef MPU_InitStruct = { 0 };
-
-            HAL_MPU_Disable();
-
-            extern uint8_t __ETH_BUFFERS_START;
-
-            MPU_InitStruct.Enable = ipconfigIS_ENABLED( niEMAC_USE_MPU ) ? ENABLE : DISABLE;
-            MPU_InitStruct.Number = MPU_REGION_NUMBER0;
-            MPU_InitStruct.BaseAddress = ( uint32_t ) &__ETH_BUFFERS_START;
-            MPU_InitStruct.Size = MPU_REGION_SIZE_128KB;
-            MPU_InitStruct.SubRegionDisable = 0x0;
-            MPU_InitStruct.TypeExtField = MPU_TEX_LEVEL1;
-            MPU_InitStruct.AccessPermission = MPU_REGION_FULL_ACCESS;
-            MPU_InitStruct.DisableExec = MPU_INSTRUCTION_ACCESS_DISABLE;
-            MPU_InitStruct.IsShareable = MPU_ACCESS_NOT_SHAREABLE;
-            MPU_InitStruct.IsCacheable = MPU_ACCESS_NOT_CACHEABLE;
-            MPU_InitStruct.IsBufferable = MPU_ACCESS_NOT_BUFFERABLE;
-
-            HAL_MPU_ConfigRegion( &MPU_InitStruct );
-
-
-            extern uint8_t __ETH_DESCRIPTORS_START;
-
-            MPU_InitStruct.Enable = MPU_REGION_ENABLE;
-            MPU_InitStruct.Number = MPU_REGION_NUMBER1;
-            MPU_InitStruct.BaseAddress = ( uint32_t ) &__ETH_DESCRIPTORS_START;
-            MPU_InitStruct.Size = MPU_REGION_SIZE_1KB;
-            MPU_InitStruct.SubRegionDisable = 0x0;
-            MPU_InitStruct.TypeExtField = MPU_TEX_LEVEL0;
-            MPU_InitStruct.AccessPermission = MPU_REGION_FULL_ACCESS;
-            MPU_InitStruct.DisableExec = MPU_INSTRUCTION_ACCESS_DISABLE;
-            MPU_InitStruct.IsShareable = MPU_ACCESS_SHAREABLE;
-            MPU_InitStruct.IsCacheable = MPU_ACCESS_NOT_CACHEABLE;
-            MPU_InitStruct.IsBufferable = MPU_ACCESS_BUFFERABLE;
-
-            HAL_MPU_ConfigRegion( &MPU_InitStruct );
-
-            HAL_MPU_Enable( MPU_PRIVILEGED_DEFAULT );
-        }
-
-    #endif /* if defined( __MPU_PRESENT ) && ( __MPU_PRESENT == 1U ) */
-
 #endif /* if 0 */
-
-/*---------------------------------------------------------------------------*/

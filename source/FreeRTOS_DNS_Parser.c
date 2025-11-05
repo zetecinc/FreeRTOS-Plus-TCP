@@ -486,30 +486,31 @@
                             LLMNRAnswer_t * pxAnswer;
                             uint8_t * pucNewBuffer = NULL;
                             size_t uxExtraLength;
-                            size_t uxDataLength = uxBufferLength +
-                                                  sizeof( UDPHeader_t ) +
-                                                  sizeof( EthernetHeader_t ) +
-                                                  uxIPHeaderSizePacket( pxNetworkBuffer );
-
-                            #if ( ipconfigUSE_IPv6 != 0 )
-                                if( xSet.usType == dnsTYPE_AAAA_HOST )
-                                {
-                                    uxExtraLength = sizeof( LLMNRAnswer_t ) + ipSIZE_OF_IPv6_ADDRESS - sizeof( pxAnswer->ulIPAddress );
-                                }
-                                else
-                            #endif /* ( ipconfigUSE_IPv6 != 0 ) */
-                            #if ( ipconfigUSE_IPv4 != 0 )
-                            {
-                                uxExtraLength = sizeof( LLMNRAnswer_t );
-                            }
-                            #else /* ( ipconfigUSE_IPv4 != 0 ) */
-                            {
-                                /* do nothing, coverity happy */
-                            }
-                            #endif /* ( ipconfigUSE_IPv4 != 0 ) */
 
                             if( xBufferAllocFixedSize == pdFALSE )
                             {
+                                size_t uxDataLength = uxBufferLength +
+                                                      sizeof( UDPHeader_t ) +
+                                                      sizeof( EthernetHeader_t ) +
+                                                      uxIPHeaderSizePacket( pxNetworkBuffer );
+
+                                #if ( ipconfigUSE_IPv6 != 0 )
+                                    if( xSet.usType == dnsTYPE_AAAA_HOST )
+                                    {
+                                        uxExtraLength = sizeof( LLMNRAnswer_t ) + ipSIZE_OF_IPv6_ADDRESS - sizeof( pxAnswer->ulIPAddress );
+                                    }
+                                    else
+                                #endif /* ( ipconfigUSE_IPv6 != 0 ) */
+                                #if ( ipconfigUSE_IPv4 != 0 )
+                                {
+                                    uxExtraLength = sizeof( LLMNRAnswer_t );
+                                }
+                                #else /* ( ipconfigUSE_IPv4 != 0 ) */
+                                {
+                                    /* do nothing, coverity happy */
+                                }
+                                #endif /* ( ipconfigUSE_IPv4 != 0 ) */
+
                                 /* Set the size of the outgoing packet. */
                                 pxNetworkBuffer->xDataLength = uxDataLength;
                                 pxNewBuffer = pxDuplicateNetworkBufferWithDescriptor( pxNetworkBuffer,
@@ -538,17 +539,7 @@
                             }
                             else
                             {
-                                /* When xBufferAllocFixedSize is TRUE, check if the buffer size is big enough to
-                                 * store the answer. */
-                                if( ( uxDataLength + uxExtraLength ) <= ipconfigNETWORK_MTU + ipSIZE_OF_ETH_HEADER )
-                                {
-                                    pucNewBuffer = &( pxNetworkBuffer->pucEthernetBuffer[ uxUDPOffset ] );
-                                }
-                                else
-                                {
-                                    /* Just to indicate that the message may not be answered. */
-                                    pxNetworkBuffer = NULL;
-                                }
+                                pucNewBuffer = &( pxNetworkBuffer->pucEthernetBuffer[ uxUDPOffset ] );
                             }
 
                             if( ( pxNetworkBuffer != NULL ) )
@@ -746,12 +737,10 @@
                                          &( pxSet->pucByte[ sizeof( DNSAnswerRecord_t ) ] ),
                                          ipSIZE_OF_IPv6_ADDRESS );
 
-                        #if ( ( ipconfigUSE_DNS_CACHE != 0 ) || ( ipconfigDNS_USE_CALLBACKS != 0 ) || ( ipconfigUSE_MDNS != 0 ) || ( ipconfigUSE_LLMNR != 0 ) )
-                            if( ppxAddressInfo != NULL )
-                            {
-                                pxNewAddress = pxNew_AddrInfo( pxSet->pcName, FREERTOS_AF_INET6, xIP_Address.xIPAddress.xIP_IPv6.ucBytes );
-                            }
-                        #endif
+                        if( ppxAddressInfo != NULL )
+                        {
+                            pxNewAddress = pxNew_AddrInfo( pxSet->pcName, FREERTOS_AF_INET6, xIP_Address.xIPAddress.xIP_IPv6.ucBytes );
+                        }
 
                         xIP_Address.xIs_IPv6 = pdTRUE;
 
@@ -776,14 +765,12 @@
                         pvCopyDest = &( pxSet->ulIPAddress );
                         ( void ) memcpy( pvCopyDest, pvCopySource, pxSet->uxAddressLength );
 
-                        #if ( ( ipconfigUSE_DNS_CACHE != 0 ) || ( ipconfigDNS_USE_CALLBACKS != 0 ) || ( ipconfigUSE_MDNS != 0 ) || ( ipconfigUSE_LLMNR != 0 ) )
-                            if( ppxAddressInfo != NULL )
-                            {
-                                const uint8_t * ucBytes = ( uint8_t * ) &( pxSet->ulIPAddress );
+                        if( ppxAddressInfo != NULL )
+                        {
+                            const uint8_t * ucBytes = ( uint8_t * ) &( pxSet->ulIPAddress );
 
-                                pxNewAddress = pxNew_AddrInfo( pxSet->pcName, FREERTOS_AF_INET4, ucBytes );
-                            }
-                        #endif
+                            pxNewAddress = pxNew_AddrInfo( pxSet->pcName, FREERTOS_AF_INET4, ucBytes );
+                        }
 
                         xIP_Address.xIPAddress.ulIP_IPv4 = pxSet->ulIPAddress;
                         xIP_Address.xIs_IPv6 = pdFALSE;
@@ -1223,11 +1210,7 @@
                 {
                     /* BufferAllocation_1.c is used, the Network Buffers can contain at least
                      * ipconfigNETWORK_MTU + ipSIZE_OF_ETH_HEADER. */
-                    if( uxSizeNeeded > ( ipconfigNETWORK_MTU + ipSIZE_OF_ETH_HEADER ) )
-                    {
-                        /* The buffer is too small to reply. Drop silently. */
-                        break;
-                    }
+                    configASSERT( uxSizeNeeded < ipconfigNETWORK_MTU + ipSIZE_OF_ETH_HEADER );
                 }
 
                 pxNetworkBuffer->xDataLength = uxSizeNeeded;
