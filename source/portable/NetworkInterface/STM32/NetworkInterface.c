@@ -2059,7 +2059,7 @@ void HAL_ETH_MspInit( ETH_HandleTypeDef * pxEthHandle )
 {
     if( pxEthHandle->Instance == ETH )
     {
-        // Enable clocks to Ethernet peripheral (MAC, TX, and RX parts); GPIO ports and pinmux are set in DPins.
+        // Enable clocks to Ethernet peripheral (MAC, TX, and RX parts); GPIO ports and pinmux are set in DPin.
         RCC->AHB1ENR |= (RCC_AHB1ENR_ETH1MACEN | RCC_AHB1ENR_ETH1TXEN | RCC_AHB1ENR_ETH1RXEN);
 
         // Enable the Ethernet interrupt (priority set with others in main.cpp)
