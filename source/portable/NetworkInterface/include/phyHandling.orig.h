@@ -25,8 +25,15 @@
  * http://www.FreeRTOS.org
  */
 
-// markh 7nov25: This is a stripped-down version for Leopard, supporting only the STM32H755 Nucleo board.
-//               The idea is to have a clear foundation for eventual KSZ9893R implementation.
+/**
+ * @brief
+ * Handling of Ethernet PHY's
+ * PHY's communicate with an EMAC either through
+ * a Media-Independent Interface (MII), or a Reduced Media-Independent Interface (RMII).
+ * The EMAC can poll for PHY ports on 32 different addresses. Each of the PHY ports
+ * shall be treated independently.
+ *
+ */
 
 #ifndef PHYHANDLING_H
 
@@ -62,14 +69,14 @@
     {
         xApplicationPhyReadHook_t fnPhyRead;
         xApplicationPhyWriteHook_t fnPhyWrite;
-        uint32_t ulPhyID;
-        uint8_t ucPhyIndex;
+        uint32_t ulPhyIDs[ ipconfigPHY_MAX_PORTS ];
+        uint8_t ucPhyIndexes[ ipconfigPHY_MAX_PORTS ];
         TimeOut_t xLinkStatusTimer;
         TickType_t xLinkStatusRemaining;
-        //BaseType_t xPortCount;
+        BaseType_t xPortCount;
         uint32_t ulBCRValue;
         uint32_t ulACRValue;
-        uint32_t ulLinkStatus;
+        uint32_t ulLinkStatusMask;
         PhyProperties_t xPhyPreferences;
         PhyProperties_t xPhyProperties;
     } EthernetPhy_t;
@@ -94,8 +101,24 @@
 
 /* ID's of supported PHY's : */
     #define PHY_ID_LAN8742A        0x0007c130
+    #define PHY_ID_LAN8720         0x0007c0f0
+
+    #define PHY_ID_KSZ8041         0x000010A1
+    #define PHY_ID_KSZ8051         0x000010A1
+    #define PHY_ID_KSZ8081         0x000010A1
+
+    #define PHY_ID_KSZ8863         0x00221430
+    #define PHY_ID_KSZ8795         0x00221550
+    #define PHY_ID_KSZ8081MNXIA    0x00221560
 
     #define PHY_ID_KSZ9893R        0x00221637  // markh 6nov25
+
+    #define PHY_ID_DP83848I        0x20005C90
+    #define PHY_ID_DP83TC811S      0x2000A250
+
+    #define PHY_ID_TM4C129X        0x2000A221
+
+    #define PHY_ID_MV88E6071       0xFF000710
 
 /* Initialise the struct and assign a PHY-read and -write function. */
     void vPhyInitialise( EthernetPhy_t * pxPhyObject,
@@ -110,15 +133,25 @@
                               const PhyProperties_t * pxPhyProperties );
 
 /* Give a command to start auto negotiation on a set of PHY port's. */
-    BaseType_t xPhyStartAutoNegotiation( EthernetPhy_t * pxPhyObject );
+    BaseType_t xPhyStartAutoNegotiation( EthernetPhy_t * pxPhyObject,
+                                         uint32_t ulPhyMask );
 
 /* Do not use auto negotiation but use predefined values from 'pxPhyObject->xPhyPreferences'. */
-    BaseType_t xPhyFixedValue( EthernetPhy_t * pxPhyObject );
+    BaseType_t xPhyFixedValue( EthernetPhy_t * pxPhyObject,
+                               uint32_t ulPhyMask );
 
 /* Check the current Link Status.
  * 'xHadReception' : make this true if a packet has been received since the
  * last call to this function. */
     BaseType_t xPhyCheckLinkStatus( EthernetPhy_t * pxPhyObject,
                                     BaseType_t xHadReception );
+
+/* Get the bitmask of a given 'EthernetPhy_t'. */
+    #define xPhyGetMask( pxPhyObject ) \
+    ( ( ( ( uint32_t ) 1u ) << ( pxPhyObject )->xPortCount ) - 1u )
+
+    #ifdef __cplusplus
+}     /* extern "C" */
+    #endif
 
 #endif /* PHYHANDLING_H */

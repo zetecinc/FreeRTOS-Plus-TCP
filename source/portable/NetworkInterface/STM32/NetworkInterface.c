@@ -480,7 +480,8 @@ static BaseType_t prvGetPhyLinkStatus( NetworkInterface_t * pxInterface )
 
     /* const EMACData_t xEMACData = *( ( EMACData_t * ) pxInterface->pvArgument ); */
 
-    if( xPhyObject.ulLinkStatusMask != 0U )
+    //if( xPhyObject.ulLinkStatusMask != 0U )
+    if( xPhyObject.ulLinkStatus )
     {
         xReturn = pdTRUE;
     }
@@ -1619,7 +1620,8 @@ static BaseType_t prvMacUpdateConfig( ETH_HandleTypeDef * pxEthHandle,
     ( void ) HAL_ETH_GetMACConfig( pxEthHandle, &xMACConfig );
 
     #if ipconfigIS_ENABLED( niEMAC_AUTO_NEGOTIATION )
-        ( void ) xPhyStartAutoNegotiation( pxPhyObject, xPhyGetMask( pxPhyObject ) );
+//        ( void ) xPhyStartAutoNegotiation( pxPhyObject, xPhyGetMask( pxPhyObject ) );
+        ( void ) xPhyStartAutoNegotiation( pxPhyObject );
     #else
         ( void ) xPhyFixedValue( pxPhyObject, xPhyGetMask( pxPhyObject ) );
     #endif
