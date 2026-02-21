@@ -330,13 +330,13 @@ typedef enum
 /*===========================================================================*/
 /*---------------------------------------------------------------------------*/
 
-/* Phy Hooks */
-static BaseType_t prvPhyReadReg( BaseType_t xAddress,
-                                 BaseType_t xRegister,
-                                 uint32_t * pulValue );
-static BaseType_t prvPhyWriteReg( BaseType_t xAddress,
-                                  BaseType_t xRegister,
-                                  uint32_t ulValue );
+// /* Phy Hooks */
+// static BaseType_t prvPhyReadReg( BaseType_t xAddress,
+//                                  BaseType_t xRegister,
+//                                  uint32_t * pulValue );
+// static BaseType_t prvPhyWriteReg( BaseType_t xAddress,
+//                                   BaseType_t xRegister,
+//                                   uint32_t ulValue );
 
 /* Network Interface Access Hooks */
 static BaseType_t prvGetPhyLinkStatus( NetworkInterface_t * pxInterface );
@@ -392,8 +392,8 @@ static void prvRemoveDestMACAddrHash( ETH_HandleTypeDef * pxEthHandle,
 
 /* EMAC Helpers */
 static void prvReleaseTxPacket( ETH_HandleTypeDef * pxEthHandle );
-static BaseType_t prvMacUpdateConfig( ETH_HandleTypeDef * pxEthHandle,
-                                      EthernetPhy_t * pxPhyObject );
+// static BaseType_t prvMacUpdateConfig( ETH_HandleTypeDef * pxEthHandle,
+//                                       EthernetPhy_t * pxPhyObject );
 static void prvReleaseNetworkBufferDescriptor( NetworkBufferDescriptor_t * const pxDescriptor );
 static void prvSendRxEvent( NetworkBufferDescriptor_t * const pxDescriptor );
 static BaseType_t prvAcceptPacket( const NetworkBufferDescriptor_t * const pxDescriptor,
@@ -436,35 +436,35 @@ static uint8_t ucAddrHashCounters[ niEMAC_ADDRESS_HASH_BITS ] = { 0U };
 /*===========================================================================*/
 /*---------------------------------------------------------------------------*/
 
-static BaseType_t prvPhyReadReg( BaseType_t xAddress,
-                                 BaseType_t xRegister,
-                                 uint32_t * pulValue )
-{
-    BaseType_t xResult = 0;
+// static BaseType_t prvPhyReadReg( BaseType_t xAddress,
+//                                  BaseType_t xRegister,
+//                                  uint32_t * pulValue )
+// {
+//     BaseType_t xResult = 0;
 
-    if( HAL_ETH_ReadPHYRegister( &xEthHandle, ( uint32_t ) xAddress, ( uint32_t ) xRegister, pulValue ) != HAL_OK )
-    {
-        xResult = -1;
-    }
+//     if( HAL_ETH_ReadPHYRegister( &xEthHandle, ( uint32_t ) xAddress, ( uint32_t ) xRegister, pulValue ) != HAL_OK )
+//     {
+//         xResult = -1;
+//     }
 
-    return xResult;
-}
+//     return xResult;
+// }
 
-/*---------------------------------------------------------------------------*/
+// /*---------------------------------------------------------------------------*/
 
-static BaseType_t prvPhyWriteReg( BaseType_t xAddress,
-                                  BaseType_t xRegister,
-                                  uint32_t ulValue )
-{
-    BaseType_t xResult = 0;
+// static BaseType_t prvPhyWriteReg( BaseType_t xAddress,
+//                                   BaseType_t xRegister,
+//                                   uint32_t ulValue )
+// {
+//     BaseType_t xResult = 0;
 
-    if( HAL_ETH_WritePHYRegister( &xEthHandle, ( uint32_t ) xAddress, ( uint32_t ) xRegister, ulValue ) != HAL_OK )
-    {
-        xResult = -1;
-    }
+//     if( HAL_ETH_WritePHYRegister( &xEthHandle, ( uint32_t ) xAddress, ( uint32_t ) xRegister, ulValue ) != HAL_OK )
+//     {
+//         xResult = -1;
+//     }
 
-    return xResult;
-}
+//     return xResult;
+// }
 
 /*---------------------------------------------------------------------------*/
 /*===========================================================================*/
@@ -475,18 +475,10 @@ static BaseType_t prvPhyWriteReg( BaseType_t xAddress,
 static BaseType_t prvGetPhyLinkStatus( NetworkInterface_t * pxInterface )
 {
     ( void ) pxInterface;
-
-    BaseType_t xReturn = pdFALSE;
-
-    /* const EMACData_t xEMACData = *( ( EMACData_t * ) pxInterface->pvArgument ); */
-
-    //if( xPhyObject.ulLinkStatusMask != 0U )
-    if( xPhyObject.ulLinkStatus )
-    {
-        xReturn = pdTRUE;
-    }
-
-    return xReturn;
+    /* Fixed-link design: STM32 MAC <-> KSZ9893 host port (RMII) is configured
+     * as 100 Mbps, full-duplex. No PHY polling is performed here.
+     */
+    return pdTRUE;
 }
 
 /*---------------------------------------------------------------------------*/
@@ -869,34 +861,34 @@ static portTASK_FUNCTION( prvEMACHandlerTask, pvParameters )
             /* if( ( ulISREvents & eMacEventErrDma ) != 0 ) */
         }
 
-        if( xPhyCheckLinkStatus( pxPhyObject, xResult ) != pdFALSE )
-        {
-            if( prvGetPhyLinkStatus( pxInterface ) != pdFALSE )
-            {
-                if( pxEthHandle->gState == HAL_ETH_STATE_ERROR )
-                {
-                    /* Recover from critical error */
-                    ( void ) HAL_ETH_Init( pxEthHandle );
-                }
+        // if( xPhyCheckLinkStatus( pxPhyObject, xResult ) != pdFALSE )
+        // {
+        //     if( prvGetPhyLinkStatus( pxInterface ) != pdFALSE )
+        //     {
+        //         if( pxEthHandle->gState == HAL_ETH_STATE_ERROR )
+        //         {
+        //             /* Recover from critical error */
+        //             ( void ) HAL_ETH_Init( pxEthHandle );
+        //         }
 
-                if( pxEthHandle->gState == HAL_ETH_STATE_READY )
-                {
-                    /* Link was down or critical error occurred */
-                    if( prvMacUpdateConfig( pxEthHandle, pxPhyObject ) != pdFALSE )
-                    {
-                        ( void ) HAL_ETH_Start_IT( pxEthHandle );
-                    }
-                }
-            }
-            else
-            {
-                ( void ) HAL_ETH_Stop_IT( pxEthHandle );
-                prvReleaseTxPacket( pxEthHandle );
-                #if ( ipconfigIS_ENABLED( ipconfigSUPPORT_NETWORK_DOWN_EVENT ) )
-                    FreeRTOS_NetworkDown( pxInterface );
-                #endif
-            }
-        }
+        //         if( pxEthHandle->gState == HAL_ETH_STATE_READY )
+        //         {
+        //             /* Link was down or critical error occurred */
+        //             if( prvMacUpdateConfig( pxEthHandle, pxPhyObject ) != pdFALSE )
+        //             {
+        //                 ( void ) HAL_ETH_Start_IT( pxEthHandle );
+        //             }
+        //         }
+        //     }
+        //     else
+        //     {
+        //         ( void ) HAL_ETH_Stop_IT( pxEthHandle );
+        //         prvReleaseTxPacket( pxEthHandle );
+        //         #if ( ipconfigIS_ENABLED( ipconfigSUPPORT_NETWORK_DOWN_EVENT ) )
+        //             FreeRTOS_NetworkDown( pxInterface );
+        //         #endif
+        //     }
+        // }
     }
 }
 
@@ -1020,6 +1012,8 @@ static BaseType_t prvEthConfigInit( ETH_HandleTypeDef * pxEthHandle,
             xMACConfig.CRCStripTypePacket = DISABLE;
             xMACConfig.AutomaticPadCRCStrip = ENABLE;
             xMACConfig.RetryTransmission = ENABLE;
+            xMACConfig.Speed = ETH_SPEED_100M;
+            xMACConfig.DuplexMode = ETH_FULLDUPLEX_MODE;
             ( void ) HAL_ETH_SetMACConfig( pxEthHandle, &xMACConfig );
 
             ETH_DMAConfigTypeDef xDMAConfig;
@@ -1289,64 +1283,66 @@ static void prvInitMacAddresses( ETH_HandleTypeDef * pxEthHandle,
 
 static BaseType_t prvPhyInit( EthernetPhy_t * pxPhyObject )
 {
-    BaseType_t xResult = pdFAIL;
+    // BaseType_t xResult = pdFAIL;
 
-    vPhyInitialise( pxPhyObject, ( xApplicationPhyReadHook_t ) prvPhyReadReg, ( xApplicationPhyWriteHook_t ) prvPhyWriteReg );
+    // vPhyInitialise( pxPhyObject, ( xApplicationPhyReadHook_t ) prvPhyReadReg, ( xApplicationPhyWriteHook_t ) prvPhyWriteReg );
 
-    if( xPhyDiscover( pxPhyObject ) != 0 )
-    {
-        xResult = pdPASS;
-    }
+    // if( xPhyDiscover( pxPhyObject ) != 0 )
+    // {
+    //     xResult = pdPASS;
+    // }
 
-    return xResult;
+    // return xResult;
+    return pdPASS;
 }
 
 static BaseType_t prvPhyStart( ETH_HandleTypeDef * pxEthHandle,
                                NetworkInterface_t * pxInterface,
                                EthernetPhy_t * pxPhyObject )
 {
-    BaseType_t xResult = pdFALSE;
+    // BaseType_t xResult = pdFALSE;
 
-    if( prvGetPhyLinkStatus( pxInterface ) == pdFALSE )
-    {
-        const PhyProperties_t xPhyProperties =
-        {
-            #if ipconfigIS_ENABLED( niEMAC_AUTO_NEGOTIATION )
-                .ucSpeed  = PHY_SPEED_AUTO,
-                .ucDuplex = PHY_DUPLEX_AUTO,
-            #else
-                .ucSpeed  = ipconfigIS_ENABLED( niEMAC_USE_100MB ) ? PHY_SPEED_100 : PHY_SPEED_10,
-                .ucDuplex = ipconfigIS_ENABLED( niEMAC_USE_FULL_DUPLEX ) ? PHY_DUPLEX_FULL : PHY_DUPLEX_HALF,
-            #endif
+    // if( prvGetPhyLinkStatus( pxInterface ) == pdFALSE )
+    // {
+    //     const PhyProperties_t xPhyProperties =
+    //     {
+    //         #if ipconfigIS_ENABLED( niEMAC_AUTO_NEGOTIATION )
+    //             .ucSpeed  = PHY_SPEED_AUTO,
+    //             .ucDuplex = PHY_DUPLEX_AUTO,
+    //         #else
+    //             .ucSpeed  = ipconfigIS_ENABLED( niEMAC_USE_100MB ) ? PHY_SPEED_100 : PHY_SPEED_10,
+    //             .ucDuplex = ipconfigIS_ENABLED( niEMAC_USE_FULL_DUPLEX ) ? PHY_DUPLEX_FULL : PHY_DUPLEX_HALF,
+    //         #endif
 
-            #if ipconfigIS_ENABLED( niEMAC_AUTO_CROSS )
-                .ucMDI_X  = PHY_MDIX_AUTO,
-            #elif ipconfigIS_ENABLED( niEMAC_CROSSED_LINK )
-                .ucMDI_X  = PHY_MDIX_CROSSED,
-            #else
-                .ucMDI_X  = PHY_MDIX_DIRECT,
-            #endif
-        };
+    //         #if ipconfigIS_ENABLED( niEMAC_AUTO_CROSS )
+    //             .ucMDI_X  = PHY_MDIX_AUTO,
+    //         #elif ipconfigIS_ENABLED( niEMAC_CROSSED_LINK )
+    //             .ucMDI_X  = PHY_MDIX_CROSSED,
+    //         #else
+    //             .ucMDI_X  = PHY_MDIX_DIRECT,
+    //         #endif
+    //     };
 
-        #if ipconfigIS_DISABLED( niEMAC_AUTO_NEGOTIATION )
-            pxPhyObject->xPhyPreferences.ucSpeed = xPhyProperties.ucSpeed;
-            pxPhyObject->xPhyPreferences.ucDuplex = xPhyProperties.ucDuplex;
-        #endif
+    //     #if ipconfigIS_DISABLED( niEMAC_AUTO_NEGOTIATION )
+    //         pxPhyObject->xPhyPreferences.ucSpeed = xPhyProperties.ucSpeed;
+    //         pxPhyObject->xPhyPreferences.ucDuplex = xPhyProperties.ucDuplex;
+    //     #endif
 
-        if( xPhyConfigure( pxPhyObject, &xPhyProperties ) == 0 )
-        {
-            if( prvMacUpdateConfig( pxEthHandle, pxPhyObject ) != pdFALSE )
-            {
-                xResult = pdTRUE;
-            }
-        }
-    }
-    else
-    {
-        xResult = pdTRUE;
-    }
+    //     if( xPhyConfigure( pxPhyObject, &xPhyProperties ) == 0 )
+    //     {
+    //         if( prvMacUpdateConfig( pxEthHandle, pxPhyObject ) != pdFALSE )
+    //         {
+    //             xResult = pdTRUE;
+    //         }
+    //     }
+    // }
+    // else
+    // {
+    //     xResult = pdTRUE;
+    // }
 
-    return xResult;
+    // return xResult;
+    return pdPASS;
 }
 
 /*---------------------------------------------------------------------------*/
@@ -1606,35 +1602,35 @@ static void prvReleaseTxPacket( ETH_HandleTypeDef * pxEthHandle )
 
 /*---------------------------------------------------------------------------*/
 
-static BaseType_t prvMacUpdateConfig( ETH_HandleTypeDef * pxEthHandle,
-                                      EthernetPhy_t * pxPhyObject )
-{
-    BaseType_t xResult = pdFALSE;
+// static BaseType_t prvMacUpdateConfig( ETH_HandleTypeDef * pxEthHandle,
+//                                       EthernetPhy_t * pxPhyObject )
+// {
+//     BaseType_t xResult = pdFALSE;
 
-    if( pxEthHandle->gState == HAL_ETH_STATE_STARTED )
-    {
-        ( void ) HAL_ETH_Stop_IT( pxEthHandle );
-    }
+//     if( pxEthHandle->gState == HAL_ETH_STATE_STARTED )
+//     {
+//         ( void ) HAL_ETH_Stop_IT( pxEthHandle );
+//     }
 
-    ETH_MACConfigTypeDef xMACConfig;
-    ( void ) HAL_ETH_GetMACConfig( pxEthHandle, &xMACConfig );
+//     ETH_MACConfigTypeDef xMACConfig;
+//     ( void ) HAL_ETH_GetMACConfig( pxEthHandle, &xMACConfig );
 
-    #if ipconfigIS_ENABLED( niEMAC_AUTO_NEGOTIATION )
-//        ( void ) xPhyStartAutoNegotiation( pxPhyObject, xPhyGetMask( pxPhyObject ) );
-        ( void ) xPhyStartAutoNegotiation( pxPhyObject );
-    #else
-        ( void ) xPhyFixedValue( pxPhyObject, xPhyGetMask( pxPhyObject ) );
-    #endif
-    xMACConfig.DuplexMode = ( pxPhyObject->xPhyProperties.ucDuplex == PHY_DUPLEX_FULL ) ? ETH_FULLDUPLEX_MODE : ETH_HALFDUPLEX_MODE;
-    xMACConfig.Speed = ( pxPhyObject->xPhyProperties.ucSpeed == PHY_SPEED_10 ) ? ETH_SPEED_10M : ETH_SPEED_100M;
+//     #if ipconfigIS_ENABLED( niEMAC_AUTO_NEGOTIATION )
+// //        ( void ) xPhyStartAutoNegotiation( pxPhyObject, xPhyGetMask( pxPhyObject ) );
+//         ( void ) xPhyStartAutoNegotiation( pxPhyObject );
+//     #else
+//         ( void ) xPhyFixedValue( pxPhyObject, xPhyGetMask( pxPhyObject ) );
+//     #endif
+//     xMACConfig.DuplexMode = ( pxPhyObject->xPhyProperties.ucDuplex == PHY_DUPLEX_FULL ) ? ETH_FULLDUPLEX_MODE : ETH_HALFDUPLEX_MODE;
+//     xMACConfig.Speed = ( pxPhyObject->xPhyProperties.ucSpeed == PHY_SPEED_10 ) ? ETH_SPEED_10M : ETH_SPEED_100M;
 
-    if( HAL_ETH_SetMACConfig( pxEthHandle, &xMACConfig ) == HAL_OK )
-    {
-        xResult = pdTRUE;
-    }
+//     if( HAL_ETH_SetMACConfig( pxEthHandle, &xMACConfig ) == HAL_OK )
+//     {
+//         xResult = pdTRUE;
+//     }
 
-    return xResult;
-}
+//     return xResult;
+// }
 
 /*---------------------------------------------------------------------------*/
 
