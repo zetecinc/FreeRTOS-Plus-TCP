@@ -35,22 +35,23 @@
 //  *
 //  */
 
-// /* Standard includes. */
-// #include <stdint.h>
-// #include <stdio.h>
-// #include <stdlib.h>
+/* Standard includes. */
+#include <stdint.h>
+#include <stdio.h>
+#include <stdlib.h>
 
-// /* FreeRTOS includes. */
-// #include "FreeRTOS.h"
-// #include "task.h"
-// #include "queue.h"
-// #include "semphr.h"
+/* FreeRTOS includes. */
+#include "FreeRTOS.h"
+#include "task.h"
+#include "queue.h"
+#include "semphr.h"
 
-// /* FreeRTOS+TCP includes. */
-// #include "FreeRTOS_IP.h"
-// #include "FreeRTOS_Sockets.h"
+/* FreeRTOS+TCP includes. */
+#include "FreeRTOS_IP.h"
+#include "FreeRTOS_Sockets.h"
 
-// #include "phyHandling.h"
+#include "phyHandling.h"
+#include "ksz9893r.h"
 
 // #define phyMIN_PHY_ADDRESS    0
 // #define phyMAX_PHY_ADDRESS    31
@@ -735,32 +736,44 @@
 // }
 // /*-----------------------------------------------------------*/
 
-// BaseType_t xPhyCheckLinkStatus( EthernetPhy_t * pxPhyObject,
-//                                 BaseType_t xHadReception )
-// {
-//     uint32_t ulStatus, ulBitMask = 1U;
-//     BaseType_t xPhyIndex;
-//     BaseType_t xNeedCheck = pdFALSE;
+BaseType_t xPhyCheckLinkStatus( EthernetPhy_t * pxPhyObject,
+                                BaseType_t xHadReception )
+{
+    uint32_t ulStatus, ulBitMask = 1U;
+    BaseType_t xPhyIndex;
+    BaseType_t xNeedCheck = pdFALSE;
 
-//     if( xHadReception > 0 )
-//     {
-//         /* A packet was received. No need to check for the PHY status now,
-//          * but set a timer to check it later on. */
-//         vTaskSetTimeOutState( &( pxPhyObject->xLinkStatusTimer ) );
-//         pxPhyObject->xLinkStatusRemaining = pdMS_TO_TICKS( ipconfigPHY_LS_HIGH_CHECK_TIME_MS );
+    if( xHadReception > 0 )
+    {
+        /* A packet was received. No need to check for the PHY status now,
+         * but set a timer to check it later on. */
+        vTaskSetTimeOutState( &( pxPhyObject->xLinkStatusTimer ) );
+        pxPhyObject->xLinkStatusRemaining = pdMS_TO_TICKS( ipconfigPHY_LS_HIGH_CHECK_TIME_MS );
 
-//         for( xPhyIndex = 0; xPhyIndex < pxPhyObject->xPortCount; xPhyIndex++, ulBitMask <<= 1 )
-//         {
-//             if( ( pxPhyObject->ulLinkStatusMask & ulBitMask ) == 0UL )
-//             {
-//                 pxPhyObject->ulLinkStatusMask |= ulBitMask;
-//                 FreeRTOS_printf( ( "xPhyCheckLinkStatus: PHY LS now %02X\n", ( unsigned int ) pxPhyObject->ulLinkStatusMask ) );
-//                 xNeedCheck = pdTRUE;
-//             }
-//         }
-//     }
-//     else if( xTaskCheckForTimeOut( &( pxPhyObject->xLinkStatusTimer ), &( pxPhyObject->xLinkStatusRemaining ) ) != pdFALSE )
-//     {
+        for( xPhyIndex = 0; xPhyIndex < pxPhyObject->xPortCount; xPhyIndex++, ulBitMask <<= 1 )
+        {
+            if( ( pxPhyObject->ulLinkStatusMask & ulBitMask ) == 0UL )
+            {
+                pxPhyObject->ulLinkStatusMask |= ulBitMask;
+                FreeRTOS_printf( ( "xPhyCheckLinkStatus: PHY LS now %02X\n", ( unsigned int ) pxPhyObject->ulLinkStatusMask ) );
+                xNeedCheck = pdTRUE;
+            }
+        }
+    }
+    else if( xTaskCheckForTimeOut( &( pxPhyObject->xLinkStatusTimer ), &( pxPhyObject->xLinkStatusRemaining ) ) != pdFALSE )
+    {
+        static uint16_t port1_speed = 0;
+        static uint16_t port2_speed = 0;
+        uint16_t spd1 = ksz9893r_get_link_speed(1);
+        uint16_t spd2 = ksz9893r_get_link_speed(2);
+        if (spd1 != port1_speed || spd2 != port2_speed) 
+        {
+            port1_speed = spd1;
+            port2_speed = spd2;
+            FreeRTOS_debug_printf( ( "xPhyCheckLinkStatus: port1=%dMbps, port2=%dMbps\n", port1_speed, port2_speed) );
+            //@@ cz - need a way to report the status to upper layer, e.g. by calling a callback function in network interface, or by sending an event to network interface task, etc.
+        }
+
 //         /* Frequent checking the PHY Link Status can affect for the performance of Ethernet controller.
 //          * As long as packets are received, no polling is needed.
 //          * Otherwise, polling will be done when the 'xLinkStatusTimer' expires. */
@@ -787,20 +800,21 @@
 //             }
 //         }
 
-//         vTaskSetTimeOutState( &( pxPhyObject->xLinkStatusTimer ) );
+        vTaskSetTimeOutState( &( pxPhyObject->xLinkStatusTimer ) );
 
-//         if( ( pxPhyObject->ulLinkStatusMask & ( ulBitMask >> 1 ) ) != 0 )
-//         {
-//             /* The link status is high, so don't poll the PHY too often. */
-//             pxPhyObject->xLinkStatusRemaining = pdMS_TO_TICKS( ipconfigPHY_LS_HIGH_CHECK_TIME_MS );
-//         }
-//         else
-//         {
-//             /* The link status is low, polling may be done more frequently. */
-//             pxPhyObject->xLinkStatusRemaining = pdMS_TO_TICKS( ipconfigPHY_LS_LOW_CHECK_TIME_MS );
-//         }
-//     }
+        // if( ( pxPhyObject->ulLinkStatusMask & ( ulBitMask >> 1 ) ) != 0 )
+        if (port1_speed != 0 || port2_speed != 0)
+        {
+            /* The link status is high, so don't poll the PHY too often. */
+            pxPhyObject->xLinkStatusRemaining = pdMS_TO_TICKS( ipconfigPHY_LS_HIGH_CHECK_TIME_MS );
+        }
+        else
+        {
+            /* The link status is low, polling may be done more frequently. */
+            pxPhyObject->xLinkStatusRemaining = pdMS_TO_TICKS( ipconfigPHY_LS_LOW_CHECK_TIME_MS );
+        }
+    }
 
-//     return xNeedCheck;
-// }
-// /*-----------------------------------------------------------*/
+    return xNeedCheck;
+}
+/*-----------------------------------------------------------*/
