@@ -764,8 +764,8 @@ BaseType_t xPhyCheckLinkStatus( EthernetPhy_t * pxPhyObject,
     {
         static uint16_t port1_speed = 0;
         static uint16_t port2_speed = 0;
-        uint16_t spd1 = ksz9893r_get_link_speed(1);
-        uint16_t spd2 = ksz9893r_get_link_speed(2);
+        uint16_t spd1 = Ksz9893rGetLinkSpeed(1);
+        uint16_t spd2 = Ksz9893rGetLinkSpeed(2);
         if (spd1 != port1_speed || spd2 != port2_speed) 
         {
             port1_speed = spd1;
