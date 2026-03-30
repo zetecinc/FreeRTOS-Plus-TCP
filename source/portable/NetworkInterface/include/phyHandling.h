@@ -140,11 +140,11 @@
 //     BaseType_t xPhyFixedValue( EthernetPhy_t * pxPhyObject,
 //                                uint32_t ulPhyMask );
 
-// /* Check the current Link Status.
-//  * 'xHadReception' : make this true if a packet has been received since the
-//  * last call to this function. */
-//     BaseType_t xPhyCheckLinkStatus( EthernetPhy_t * pxPhyObject,
-//                                     BaseType_t xHadReception );
+/* Check the current Link Status.
+ * 'xHadReception' : make this true if a packet has been received since the
+ * last call to this function. */
+    BaseType_t xPhyCheckLinkStatus( EthernetPhy_t * pxPhyObject,
+                                    BaseType_t xHadReception );
 
 // /* Get the bitmask of a given 'EthernetPhy_t'. */
 //     #define xPhyGetMask( pxPhyObject ) \

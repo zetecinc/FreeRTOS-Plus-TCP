@@ -76,7 +76,6 @@
     #error "Unknown STM32 Family for NetworkInterface"
 #endif /* if defined( STM32F4 ) */
 
-
 /*---------------------------------------------------------------------------*/
 /*===========================================================================*/
 /*                                Config                                     */
@@ -861,8 +860,8 @@ static portTASK_FUNCTION( prvEMACHandlerTask, pvParameters )
             /* if( ( ulISREvents & eMacEventErrDma ) != 0 ) */
         }
 
-        // if( xPhyCheckLinkStatus( pxPhyObject, xResult ) != pdFALSE )
-        // {
+        if( xPhyCheckLinkStatus( pxPhyObject, xResult ) != pdFALSE )
+        {
         //     if( prvGetPhyLinkStatus( pxInterface ) != pdFALSE )
         //     {
         //         if( pxEthHandle->gState == HAL_ETH_STATE_ERROR )
@@ -888,7 +887,7 @@ static portTASK_FUNCTION( prvEMACHandlerTask, pvParameters )
         //             FreeRTOS_NetworkDown( pxInterface );
         //         #endif
         //     }
-        // }
+        }
     }
 }
 
