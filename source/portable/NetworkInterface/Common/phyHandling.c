@@ -51,7 +51,7 @@
 #include "FreeRTOS_Sockets.h"
 
 #include "phyHandling.h"
-#include "ksz9893r.h"
+#include "DLAN.h"
 
 // #define phyMIN_PHY_ADDRESS    0
 // #define phyMAX_PHY_ADDRESS    31
